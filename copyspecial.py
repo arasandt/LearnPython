@@ -18,6 +18,9 @@ import shutil
 # +++your code here+++
 # Write functions and modify main() to call them
 def get_special_paths(passdir):
+  #print(os.listdir(passdir))
+  #print(os.path.abspath(os.path.join(passdir,"abc.txt")))
+  #return
   if passdir == ".":
       wkdir = os.getcwd() + "\\copyspecial"
   else:
@@ -35,10 +38,18 @@ def copy_to(paths, dir):
   #pass
   return
 
-def zip_to(paths, zippath):
-  pass
-  return
 
+# def zip_to(paths, zipfile):
+#   """Zip up all of the given files into a new zip file with the given name."""
+#   cmd = 'zip -j ' + zipfile + ' ' + ' '.join(paths)
+#   print "Command I'm going to do:" + cmd
+#   (status, output) = commands.getstatusoutput(cmd)
+#   # If command had a problem (status is non-zero),
+#   # print its output to stderr and exit.
+#   if status:
+#     sys.stderr.write(output)
+#     sys.exit(1)
+    
 def main():
   # This basic command line argument parsing code is provided.
   # Add code to call your functions below.
@@ -70,13 +81,13 @@ def main():
   #print(args)
   # # +++your code here+++
   # # Call your functions
-  paths = get_special_paths(args[0])
+  paths = get_special_paths(args[0]) #for multiple files use list.extend too add more files. It will not create list within list
   if todir:
     copy_to(paths,todir)
   elif tozip:
     zip(paths,tozip)
   else:
-    print(paths)
+    print('\n'.join(paths))
 
 
 if __name__ == "__main__":
