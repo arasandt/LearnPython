@@ -13,6 +13,7 @@ import re
 from urllib.request import urlopen
 from bs4 import BeautifulSoup as BS
 from operator import itemgetter, attrgetter
+from collections import OrderedDict
 
 """Baby Names exercise
 
@@ -79,26 +80,48 @@ def extract_names(f):
     #sp5 = sp5 + list(zip(sp2,sp3))
     #sp5 = sp5 + list(zip(sp2,sp4))
     #final_temp = sorted(sp5,key=itemgetter(1))
-    final_temp = sorted(detail1,key=itemgetter(1))
-    final_temp = [l[1] + " " + l[0] for l in final_temp ]
-    final = []
-    for i in final_temp:
-        final.append(i)
-        if str(final[-2:-1:]).split(' ')[0] == str(final[-1:]).split(' ')[0]:
-            if str(final[-2:-1:]).split(' ')[1] < str(final[-1:]).split(' ')[1]:
-                final = final[:-1:]
-            else:
-                final = final[:-2:] + final[-1:]
-    #print(fil)
+    #print(detail1)
+    #sys.exit(1)
+    wk_dict = {}
+    for tuples in detail1:
+        (rank,boyname,girlname) = tuples
+        if boyname not in wk_dict:
+            wk_dict[boyname] = rank
+        if girlname not in wk_dict:
+            wk_dict[girlname] = rank
 
-    ab = '\n'.join(final)
+
+ 
+
+
+    wk_dict1 = sorted(wk_dict.items(), key=itemgetter(0))
+    #print(wk_dict1)
+    names = []
+    for name in wk_dict1:
+        (a , b) = name
+        names.append(a + " " +b)
+    #print(wk_dict)
+    # sys.exit(1)
+    # final_temp = sorted(detail1,key=itemgetter(1))
+    # final_temp = [l[1] + " " + l[0] for l in final_temp ]
+    # final = []
+    # for i in final_temp:
+    #    final.append(i)
+    #     if str(final[-2:-1:]).split(' ')[0] == str(final[-1:]).split(' ')[0]:
+    #         if str(final[-2:-1:]).split(' ')[1] < str(final[-1:]).split(' ')[1]:
+    #             final = final[:-1:]
+    #         else:
+    #             final = final[:-2:] + final[-1:]
+    # #print(fil)
+
+    #ab = '\n'.join(names)
     #for i in final:
     #print(final)
-    print(ab)
+    #print('\n'.join(names))
 
 
 
-    return
+    return ('\n'.join(names),fil)
 
 
 def main():
@@ -139,8 +162,11 @@ def main():
     for f in args:
         fil = os.getcwd() + '\\' + f
         #print(fil)
-        extract_names(f)
-        break
+        names,file_name = extract_names(f)
+        with open(fil + ".summary",'w') as wr:
+            wr.write(file_name + "\n")
+            wr.write(names + "\n")
+        
     #for f in whole_files:
         #extract_names(f)
     #    print("******************************")
