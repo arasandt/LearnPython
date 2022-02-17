@@ -72,10 +72,10 @@ class MyListener(StreamListener):
         return True
 
 
-access_token = "3593879655-DeLzuLys0fBiGh4cywYHlhfvMZfhx9pSDRtyKlv"
-access_token_secret = "UizoSzWXjoPAvraHuizIiBhzkKlg9oIzp0QnmDJYxQLiV"
-consumer_key = "SAY58lh6ef0LXjUuXcQUneh86"
-consumer_secret = "zdnmkaoBxLWcIAdopFdjrBFEqshriVON2i11Gw3U7IQRbX2tDP"
+access_token = ""
+access_token_secret = ""
+consumer_key = ""
+consumer_secret = ""
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth)
