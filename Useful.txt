@@ -1,0 +1,216 @@
+https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-ide-c9.html?msclkid=c029124bd10a11eca96de14cbe276ad3
+echo "alias py=python3.9" >> ~/.bashrc 
+echo "alias python3=python3.9" >> ~/.bashrc 
+echo "alias pip3=pip3.9" >> ~/.bashrc 
+echo "alias csyn='cdk synthesize --quiet'" >> ~/.bashrc 
+echo "alias cboot='cdk bootstrap'" >> ~/.bashrc 
+echo "alias cdiff='cdk diff'" >> ~/.bashrc 
+echo "alias cdep='cdk deploy --all --require-approval never'" >> ~/.bashrc 
+echo "alias cdeph='cdk deploy --hotswap --all'" >> ~/.bashrc 
+echo "alias gitm='git add -u && git commit -m minorchange && git push'" >> ~/.bashrc 
+echo "alias gitf='git add -u && git commit -m codeformatter && git push'" >> ~/.bashrc 
+echo 'gitpush() { git add -u && git commit -m "$1" && git push;}' >> ~/.bashrc
+source ~/.bashrc
+export PS1='\e[36m[\@]\033[00m\] \033[01;32m\]$(_cloud9_prompt_user)\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$(__git_ps1 " (%s)" 2>/dev/null)\n$ '
+git config --global user.name "Arasan Dayalan"
+git config --global user.email thiru.arasan.dayalan@accenture.com
+git config --global alias.st status
+git config --global alias.lga "log --topo-order --graph --date=local --pretty=format:'%C(green)%h%C(reset) %><(55,trunc)%s%C(red)%d%C(reset) %C(blue)[%an]%C(reset) %C(yellow)%ad%C(reset)'"
+
+clear;
+;
+# Get remediation action status
+aws configservice describe-remediation-execution-status --config-rule-name CDKCIPComplianceStack-Cloud9SecurityGroupRule14CC9-1CDQQ7K4L00IW --query 'RemediationExecutionStatuses[].[State,InvocationTime,LastUpdatedTime]'
+
+# to find python files and format it using black
+find /home/ec2-user/environment/cip-uw-emailreceipt/ -name *.py | grep -v ".venv" | grep -v "cdk.out" | grep -v "test" | grep -v ".~" | grep -v "_archive" | grep -v "__init__" | grep -v  "psycopg2" | grep -v  "idna" | grep -v  "urllib3" | grep -v  "requests" | grep -v  "certifi" | grep -v  "charset_normalizer" | grep -v  "pyparsing" | grep -v  "typing_extensions" | grep -v  "packaging"  | grep -v  "zipp" | grep -v  "importlib_metadata" | grep -v  "redis" | grep -v  "wrapt"
+find /home/ec2-user/environment/cip-uw-doc-classification/ -name *.py | grep -v ".venv" | grep -v "cdk.out" | grep -v "test" | grep -v ".~" | grep -v "_archive" | grep -v "__init__" | grep -v  "psycopg2"
+
+#  check when aws config was run to pull data. Usually runs every 6 hours.
+aws configservice describe-configuration-recorder-status
+
+# to install packages in the folder when using lambda for linux
+pip install --platform manylinux2014_x86_64 --implementation cp --python 3.9 --only-binary=:all: --upgrade -r ./python/requirements.txt -t ./python
+
+# Comprehend commands
+aws comprehend describe-document-classifier --document-classifier-arn arn:aws:comprehend:us-east-2:241231414837:document-classifier/documenttype1/version/1
+aws comprehend list-document-classifiers
+
+# access shared mailbox in graph explorer
+https://graph.microsoft.com/v1.0/users/test.cip.uw.docs@accenture.com/messages
+
+
+aws lambda get-function-configuration --function-name CDKCIPUWEmailReceiptStack-cipuwmailboxmonitor47EBF-W0eJV7uvvb5x --query "Environment" > environment.json
+envs=$(jq --arg var1 "$token" '.Variables.TOKEN = $var1' environment.json)
+echo $envs > environment.json
+aws lambda update-function-configuration --function-name CDKCIPUWEmailReceiptStack-cipuwmailboxmonitor47EBF-W0eJV7uvvb5x --environment file://environment.json --query "Environment"
+aws lambda get-function-configuration --function-name CDKCIPUWEmailReceiptStack-cipuwmailboxsweeper557DF-5fckAv3iegGa --query "Environment" > environment.json
+envs=$(jq --arg var1 "$token" '.Variables.TOKEN = $var1' environment.json)
+echo $envs > environment.json
+aws lambda update-function-configuration --function-name CDKCIPUWEmailReceiptStack-cipuwmailboxsweeper557DF-5fckAv3iegGa  --environment file://environment.json --query "Environment"
+
+#test docker function locally
+sam local invoke -t <path to the CF template> -e <events json file>
+
+#If GIT is not working on AWS Cloud9
+git clone https://Username:Password@git-codecommit.us-east-1.amazonaws.com/v1/repos/cip-uw-base/
+
+#install postgresql
+amazon-linux-extras install postgresql11 -y
+yum install -y postgresql-server postgresql-devel
+/usr/bin/postgresql-setup --initdb
+systemctl enable postgresql
+systemctl start postgresql
+systemctl status postgresql
+https://dailyscrawl.com/how-to-install-postgresql-on-amazon-linux-2/
+
+
+# connect to postgres database
+psql --host=cip-uw-smart-labeler-serverless.cluster-c5td3go0h4db.us-east-2.rds.amazonaws.com --port=5432 --username=tfndrycfxnmtzxec --dbname=cipuwdev
+pg_dump -Cs -h cip-uw-smart-labeler-serverless.cluster-c5td3go0h4db.us-east-2.rds.amazonaws.com -p 5432 -U tfndrycfxnmtzxec -n public cipuwdev -f /tmp/schema_public.sql
+aws s3 cp /tmp/schema_public.sql s3://cip-uw-email-inbound
+
+
+# with schema name
+pg_dump -Cs -h cip-uw-smart-labeler-serverless.cluster-c5td3go0h4db.us-east-2.rds.amazonaws.com -p 5432 -U tfndrycfxnmtzxec -n public cipuwdev -n publicaig -f schema_public.sql
+
+psql --host=cip-uw-smart-labeler-serverless.cluster-cigmgiakybio.us-east-2.rds.amazonaws.com --port=5432 --username=nsavinrefxxrytmk --dbname=cipuwdemo < cipuwdemo.sql
+### not working -- pg_restore -h cip-uw-smart-labeler-serverless.cluster-cigmgiakybio.us-east-2.rds.amazonaws.com -p 5432 -U nsavinrefxxrytmk -n public -d cipuwdemo -f cipuwdemo.sql
+
+
+
+psql --host=uw-doc-insight-aig-poc.cluster-ccuyuwana2w7.us-east-1.rds.amazonaws.com --port=5432 --username=postgres_docins --dbname=uw_doc_insight_aigpoc_baseline
+Docins$aig12$
+1. pg_dump -Cs -h uw-doc-insight-aig-poc.cluster-ccuyuwana2w7.us-east-1.rds.amazonaws.com -p 5432 -U postgres_docins -n public uw_doc_insight_aigpoc -f uw_doc_insight_aigpoc.sql
+2. CREATE DATABASE uw_doc_insight_aigpoc WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
+3. ALTER DATABASE uw_doc_insight_aigpoc OWNER TO postgres;
+3a. Change sql file to rename postgres_docins to postgres and database to uw_doc_insight_aigpoc_baseline
+4. psql --host=claims-dev-241231414837-u-smartlabelerserverless08-zm3houw1qi4a.cluster-coe0l1dyobfr.us-west-2.rds.amazonaws.com --port=5432 --username=postgres --dbname=uw_doc_insight_aigpoc_baseline < uw_doc_insight_aigpoc.sql
+4a. Delete unnecessary tables
+5.\COPY public.dim_image_quality_quartiles FROM 'dim_image_quality_quartiles.txt' DELIMITER ',' CSV HEADER;
+6.\COPY public.dim_document_field_setup_table FROM 'dim_document_field_setup_table.txt' DELIMITER ',' CSV HEADER;
+7.\COPY public.document_type FROM 'document_type.txt' DELIMITER ',' CSV HEADER;
+8.\COPY public.dim_dropdown_setup FROM 'dim_dropdown_setup.txt' DELIMITER ',' CSV HEADER;
+9.\COPY public.dim_field_category_mapping_setup FROM 'dim_field_category_mapping_setup.txt' DELIMITER ',' CSV HEADER;
+create the actual database from baseline
+10. pg_restore -h claims-dev-241231414837-u-smartlabelerserverless08-zm3houw1qi4a.cluster-coe0l1dyobfr.us-west-2.rds.amazonaws.com -p 5432 -U postgres -d uw_doc_insight_aigpoc -v "uw_doc_insight_aigpoc_baseline.backup"
+10. pg_restore -h claimsdemo-demo-571021761-smartlabelerserverless08-bltdoti7rwce.cluster-ckyfbyrisq8n.us-west-2.rds.amazonaws.com -p 5432 -U postgres -d uw_doc_insight_aigpoc -v "uw_doc_insight_aigpoc_baseline.backup"
+
+psql --host=uw-doc-insight-aig-poc.cluster-ccuyuwana2w7.us-east-1.rds.amazonaws.com --port=5432 --username=postgres_docins --dbname=uw_doc_insight_aigpoc -c 'COPY dim_field_category_mapping_setup    TO stdout' | psql --host=uw-doc-insight-aig-poc.cluster-ccuyuwana2w7.us-east-1.rds.amazonaws.com --port=5432 --username=postgres_docins --dbname=uw_doc_insight_aigpoc_baseline -c 'COPY dim_field_category_mapping_setup   FROM stdin'
+
+# Termination sessions in DB before deleting the database
+SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity 
+WHERE pg_stat_activity.datname = 'uw_doc_insight_aigpoc_baseline' AND pid <> pg_backend_pid();
+
+
+# identify yourself in AWS
+aws sts get-caller-identify
+
+# Pylint command
+pylint --disable C0301,C0330,R0913,R0912,R0915,W0703,R0914 *.py
+
+
+# CURL POST command
+curl -X POST -H "Content-Type: application/json" -d '{"title":"hello"}' https://649kntcql2.execute-api.us-east-2.amazonaws.com/development/submit
+curl -X POST -H "Content-Type: application/json" -d '{"title":"hello"}' https://api.uw-dev.cognitiveinsurance.accenture.com/meawebhook/submit
+curl -X POST -H "Content-Type: application/json" -H "x-api-key: ABC"  -d '{"title":"hello"}' https://api.uw-dev.cognitiveinsurance.accenture.com/meawebhook/submit
+curl -X POST -H "{'Content-Type': 'text/plain'}" -d '{"AuthParameters": {"USERNAME": "", "PASSWORD": ""}, "ClientId": ""}' https://apiengine-aigpreprd.meaplatform.com/rest/api/v1/token
+
+# in case git clone fails and does not show prompt, try this
+git config --global credential.helper store
+
+# bulk replace
+find . -type f -exec sed -i 's/cip-appetite-dl-landing-ue1-dev/{{appetitelandingbucket}}/g' {} +
+
+#Clear Lambda Storage CF ERROR Code storage limit exceeded
+git clone https://github.com/epsagon/clear-lambda-storage
+cd clear-lambda-storage/
+pip install -r requirements.txt
+python clear_lambda_storage.py
+
+# check for CORS 
+curl -v -X OPTIONS https://uw-api.cognitiveinsurance.accenture.com/winpropensity/PropensityScoring?application_id=APP202210130003
+
+# remove all local changes in git
+git clean -df && git checkout -- .
+
+# Empty folder and subfolder of all files
+find ./* -type f -exec rm "{}" \;
+
+# remove c9_invoke files.
+find $pwd -name *.~c9_invoke*.py -type f -exec rm "{}" \;  
+
+# docker search based on container name and get logs
+docker logs -f $(docker ps | grep gpu | cut -c 1-4) --tail 100	
+
+# docker how long the container has ben running
+docker container inspect --format '{{.State.StartedAt }}'
+
+#Deepracer stop training
+cd deepracer-for-cloud/ && source bin/activate.sh && dr-stop-training
+    "lr": 0.00000001, 0.0003
+{
+    "batch_size": 64,
+    "beta_entropy": 0.01,
+    "discount_factor": 0.95,
+    "e_greedy_value": 1.0,
+    "epsilon_steps": 10000,
+    "exploration_type": "categorical",
+    "loss_type": "mean squared error",
+    "lr": 0.0003,
+    "num_episodes_between_training": 18,
+    "num_epochs": 4,
+    "stack_size": 1,
+    "term_cond_avg_score": 100000.0,
+    "term_cond_max_episodes": 1800,
+    "sac_alpha": 0.2
+}
+
+aws s3 cp s3://dp123testlocal/rl-dp-rf10cosmic s3://elasticbeanstalk-us-east-1-152706161531/rl-dp-rf10cosmic --recursive --acl bucket-owner-full-control
+
+
+# App Integration with Cognito
+curl --location --request POST 'https://meaconnection.auth.us-east-1.amazoncognito.com/oauth2/token' --header 'Content-Type: application/x-www-form-urlencoded' --header 'Authorization: Basic ' --data-urlencode 'grant_type=client_credentials' --data-urlencode 'client_id=' --data-urlencode 'scope=read/read'
+curl --location --request POST 'https://meaintegration.auth.us-east-2.amazoncognito.com/oauth2/token' --header 'Content-Type: application/x-www-form-urlencoded' --header 'Authorization: Basic ' --data-urlencode 'grant_type=client_credentials' --data-urlencode 'client_id=' --data-urlencode 'scope=basic/basic'
+curl --request POST 'https://f9hcln6wrd.execute-api.us-east-2.amazonaws.com/prod/awesomeapi' --header 'Authorization: XX' -d '{"templateName": "IM01-Default Template"}' 
+
+#install python3.9
+sudo yum -y install wget yum-utils make gcc openssl-devel bzip2-devel libffi-devel zlib-devel
+wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tgz 
+tar xzf Python-3.9.6.tgz 
+cd Python-3.9.6
+sudo ./configure --with-system-ffi --with-computed-gotos --enable-loadable-sqlite-extensions
+sudo make -j ${nproc} 
+sudo make altinstall 
+rm -f /bin/python3; ln -s /usr/local/bin/python3.9 /bin/python3
+rm -f /usr/bin/python3; ln -s /usr/local/bin/python3.9 /usr/bin/python3
+rm -f /usr/bin/pip3; ln -s /usr/local/bin/pip3.9 /usr/bin/pip3
+
+
+# Install Docker Compose
+sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose version
+sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /bin/docker-compose
+sudo chmod +x /bin/docker-compose
+
+
+# update cdk cli
+npm install -g aws-cdk --force 
+
+# add git tags and checkout based on tags
+git tag -a Release1.0 76bd76d -m "Released to AIG Dev on 03/14 before Phase 2 changes"
+git push --tags origin master
+git checkout tags/Release1.0
+
+
+# get public ip of the instance
+curl -s http://169.254.169.254/latest/meta-data/public-ipv4
+
+# Add / remove policy from role using cli
+aws iam detach-role-policy --role-name viper-cip-uw-admin-role --policy-arn arn:aws:iam:::policy/DenyCodeCommitDeletes
+aws iam attach-role-policy --role-name viper-cip-uw-admin-role --policy-arn arn:aws:iam:::policy/DenyCodeCommitDeletes
+aws iam list-attached-role-policies --role-name viper-cip-uw-admin-role
+
+
+
