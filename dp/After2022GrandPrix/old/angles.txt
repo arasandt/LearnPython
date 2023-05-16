@@ -1,0 +1,250 @@
+set()
+78 ( 0 ) 5        in uturn 178.99208238446724 fast
+( 0 ) 5 10 upcoming uturn 135.35637975756538 far 
+
+79 ( 1 ) 6        in uturn 174.62505335896043 fast
+( 1 ) 6 11 upcoming uturn 130.75099259444264 far 
+
+80 ( 2 ) 7        in uturn 166.81525766042665 fast
+( 2 ) 7 12 upcoming uturn 132.2952822126971 far 
+
+81 ( 3 ) 8        in uturn 156.4707366873333 fast
+( 3 ) 8 13 upcoming uturn 138.27441254427833 far 
+
+82 ( 4 ) 9        in uturn 145.29975827805262 fast
+( 4 ) 9 14 upcoming uturn 145.5077288855935 far 
+
+0 ( 5 ) 10        in uturn 135.35637975756538 fast
+( 5 ) 10 15 upcoming uturn 153.42564659423135 far 
+
+1 ( 6 ) 11        in uturn 130.75099259444264 fast
+( 6 ) 11 16 upcoming uturn 159.61522468905494 far 
+
+2 ( 7 ) 12        in uturn 132.2952822126971 fast
+( 7 ) 12 17 upcoming uturn 160.71484633116103 far 
+
+3 ( 8 ) 13        in uturn 138.27441254427833 fast
+( 8 ) 13 18 upcoming uturn 155.43594063953958 far 
+
+4 ( 9 ) 14        in uturn 145.5077288855935 fast
+( 9 ) 14 19 upcoming uturn 143.93245032382248 far 
+
+5 ( 10 ) 15        in uturn 153.42564659423135 fast
+( 10 ) 15 20 upcoming uturn 127.76214278181828 median 
+
+6 ( 11 ) 16        in uturn 159.61522468905494 fast
+( 11 ) 16 21 upcoming uturn 108.81239975433002 immediate 
+
+7 ( 12 ) 17        in uturn 160.71484633116103 fast
+( 12 ) 17 22 upcoming uturn 90.38201906298241 immediate 
+
+8 ( 13 ) 18        in uturn 155.43594063953958 fast
+( 13 ) 18 23 upcoming uturn 75.99672980493861 immediate 
+
+9 ( 14 ) 19        in uturn 143.93245032382248 fast
+( 14 ) 19 24 upcoming uturn 70.6874115918458 immediate 
+
+10 ( 15 ) 20        in uturn 127.76214278181828 fast
+( 15 ) 20 25 upcoming uturn 72.51551994084309 immediate 
+
+11 ( 16 ) 21        in uturn 108.81239975433002 slow
+( 16 ) 21 26 upcoming uturn 81.51869893256779 immediate 
+
+12 ( 17 ) 22        in uturn 90.38201906298241 slow
+( 17 ) 22 27 upcoming uturn 100.07500541646733 immediate 
+
+13 ( 18 ) 23        in uturn 75.99672980493861 slow
+( 18 ) 23 28 upcoming uturn 129.135111976081 median 
+
+14 ( 19 ) 24        in uturn 70.6874115918458 slow
+( 19 ) 24 29 upcoming uturn 160.98248867857905 far 
+
+15 ( 20 ) 25        in uturn 72.51551994084309 slow
+( 20 ) 25 30 upcoming uturn 164.15044941824752 far 
+
+16 ( 21 ) 26        in uturn 81.51869893256779 slow
+( 21 ) 26 31 upcoming uturn 128.12635994078653 median 
+
+17 ( 22 ) 27        in uturn 100.07500541646733 slow
+( 22 ) 27 32 upcoming uturn 98.99267205969822 immediate 
+
+18 ( 23 ) 28        in uturn 129.135111976081 fast
+( 23 ) 28 33 upcoming uturn 92.02136573656819 immediate 
+
+19 ( 24 ) 29        in uturn 160.98248867857905 fast
+( 24 ) 29 34 upcoming uturn 102.74773498302298 immediate 
+
+20 ( 25 ) 30        in uturn 164.15044941824752 fast
+( 25 ) 30 35 upcoming uturn 130.501475221287 far 
+
+21 ( 26 ) 31        in uturn 128.12635994078653 fast
+( 26 ) 31 36 upcoming uturn 168.13913109847184 far 
+
+22 ( 27 ) 32        in uturn 98.99267205969822 slow
+( 27 ) 32 37 upcoming uturn 158.19839335032947 far 
+
+23 ( 28 ) 33        in uturn 92.02136573656819 slow
+( 28 ) 33 38 upcoming uturn 130.23978357910303 far 
+
+24 ( 29 ) 34        in uturn 102.74773498302298 slow
+( 29 ) 34 39 upcoming uturn 122.06351900581721 median 
+
+25 ( 30 ) 35        in uturn 130.501475221287 fast
+( 30 ) 35 40 upcoming uturn 139.9522093138252 far 
+
+26 ( 31 ) 36        in uturn 168.13913109847184 fast
+( 31 ) 36 41 upcoming uturn 163.55396309273542 far 
+
+27 ( 32 ) 37        in uturn 158.19839335032947 fast
+( 32 ) 37 42 upcoming uturn 179.27949168750212 far 
+
+28 ( 33 ) 38        in uturn 130.23978357910303 fast
+( 33 ) 38 43 upcoming uturn 139.7540045822255 far 
+
+29 ( 34 ) 39        in uturn 122.06351900581721 fast
+( 34 ) 39 44 upcoming uturn 111.7933076630083 median 
+
+30 ( 35 ) 40        in uturn 139.9522093138252 fast
+( 35 ) 40 45 upcoming uturn 112.31591237264433 median 
+
+31 ( 36 ) 41        in uturn 163.55396309273542 fast
+( 36 ) 41 46 upcoming uturn 124.52264879315015 median 
+
+32 ( 37 ) 42        in uturn 179.27949168750212 fast
+( 37 ) 42 47 upcoming uturn 144.35776050180118 far 
+
+33 ( 38 ) 43        in uturn 139.7540045822255 fast
+( 38 ) 43 48 upcoming uturn 172.1459672070207 far 
+
+34 ( 39 ) 44        in uturn 111.7933076630083 fast
+( 39 ) 44 49 upcoming uturn 129.69692333625923 median 
+
+35 ( 40 ) 45        in uturn 112.31591237264433 fast
+( 40 ) 45 50 upcoming uturn 105.20194094289114 immediate 
+
+36 ( 41 ) 46        in uturn 124.52264879315015 fast
+( 41 ) 46 51 upcoming uturn 95.86764193023241 immediate 
+
+37 ( 42 ) 47        in uturn 144.35776050180118 fast
+( 42 ) 47 52 upcoming uturn 100.69981479144349 immediate 
+
+38 ( 43 ) 48        in uturn 172.1459672070207 fast
+( 43 ) 48 53 upcoming uturn 115.16982185523197 median 
+
+39 ( 44 ) 49        in uturn 129.69692333625923 fast
+( 44 ) 49 54 upcoming uturn 132.45842199928595 far 
+
+40 ( 45 ) 50        in uturn 105.20194094289114 slow
+( 45 ) 50 55 upcoming uturn 145.0805725899326 far 
+
+41 ( 46 ) 51        in uturn 95.86764193023241 slow
+( 46 ) 51 56 upcoming uturn 152.1833181886498 far 
+
+42 ( 47 ) 52        in uturn 100.69981479144349 slow
+( 47 ) 52 57 upcoming uturn 154.80521352930128 far 
+
+43 ( 48 ) 53        in uturn 115.16982185523197 fast
+( 48 ) 53 58 upcoming uturn 156.18918692175725 far 
+
+44 ( 49 ) 54        in uturn 132.45842199928595 fast
+( 49 ) 54 59 upcoming uturn 157.9292707241587 far 
+
+45 ( 50 ) 55        in uturn 145.0805725899326 fast
+( 50 ) 55 60 upcoming uturn 160.47998352490197 far 
+
+46 ( 51 ) 56        in uturn 152.1833181886498 fast
+( 51 ) 56 61 upcoming uturn 164.5646641406256 far 
+
+47 ( 52 ) 57        in uturn 154.80521352930128 fast
+( 52 ) 57 62 upcoming uturn 160.59219438232782 far 
+
+48 ( 53 ) 58        in uturn 156.18918692175725 fast
+( 53 ) 58 63 upcoming uturn 148.2607123445569 far 
+
+49 ( 54 ) 59        in uturn 157.9292707241587 fast
+( 54 ) 59 64 upcoming uturn 131.01270292693874 far 
+
+50 ( 55 ) 60        in uturn 160.47998352490197 fast
+( 55 ) 60 65 upcoming uturn 113.37883093924351 median 
+
+51 ( 56 ) 61        in uturn 164.5646641406256 fast
+( 56 ) 61 66 upcoming uturn 100.58637086975833 immediate 
+
+52 ( 57 ) 62        in uturn 160.59219438232782 fast
+( 57 ) 62 67 upcoming uturn 94.81088804012126 immediate 
+
+53 ( 58 ) 63        in uturn 148.2607123445569 fast
+( 58 ) 63 68 upcoming uturn 97.32091407196751 immediate 
+
+54 ( 59 ) 64        in uturn 131.01270292693874 fast
+( 59 ) 64 69 upcoming uturn 100.6122092665647 immediate 
+
+55 ( 60 ) 65        in uturn 113.37883093924351 fast
+( 60 ) 65 70 upcoming uturn 102.93601792396052 immediate 
+
+56 ( 61 ) 66        in uturn 100.58637086975833 slow
+( 61 ) 66 71 upcoming uturn 113.58486643341516 median 
+
+57 ( 62 ) 67        in uturn 94.81088804012126 slow
+( 62 ) 67 72 upcoming uturn 118.78490785484973 median 
+
+58 ( 63 ) 68        in uturn 97.32091407196751 slow
+( 63 ) 68 73 upcoming uturn 130.84193715420292 far 
+
+59 ( 64 ) 69        in uturn 100.6122092665647 slow
+( 64 ) 69 74 upcoming uturn 156.6767915930107 far 
+
+60 ( 65 ) 70        in uturn 102.93601792396052 slow
+( 65 ) 70 75 upcoming uturn 172.9613606934511 far 
+
+61 ( 66 ) 71        in uturn 113.58486643341516 fast
+( 66 ) 71 76 upcoming uturn 155.16248655504 far 
+
+62 ( 67 ) 72        in uturn 118.78490785484973 fast
+( 67 ) 72 77 upcoming uturn 131.5674089585825 far 
+
+63 ( 68 ) 73        in uturn 130.84193715420292 fast
+( 68 ) 73 78 upcoming uturn 117.96631462037931 median 
+
+64 ( 69 ) 74        in uturn 156.6767915930107 fast
+( 69 ) 74 79 upcoming uturn 122.73406132030034 median 
+
+65 ( 70 ) 75        in uturn 172.9613606934511 fast
+( 70 ) 75 80 upcoming uturn 135.1224466077453 far 
+
+66 ( 71 ) 76        in uturn 155.16248655504 fast
+( 71 ) 76 81 upcoming uturn 149.68147243518916 far 
+
+67 ( 72 ) 77        in uturn 131.5674089585825 fast
+( 72 ) 77 82 upcoming uturn 163.96812110299916 far 
+
+68 ( 73 ) 78        in uturn 117.96631462037931 fast
+( 73 ) 78 0 upcoming uturn 175.7508715063877 far 
+
+69 ( 74 ) 79        in uturn 122.73406132030034 fast
+( 74 ) 79 1 upcoming uturn 179.597164179685 far 
+
+70 ( 75 ) 80        in uturn 135.1224466077453 fast
+( 75 ) 80 2 upcoming uturn 179.9766673438407 far 
+
+71 ( 76 ) 81        in uturn 149.68147243518916 fast
+( 76 ) 81 3 upcoming uturn 179.9803091406623 far 
+
+72 ( 77 ) 82        in uturn 163.96812110299916 fast
+( 77 ) 82 4 upcoming uturn 179.99777084717005 far 
+
+73 ( 78 ) 0        in uturn 175.7508715063877 fast
+( 78 ) 0 5 upcoming uturn 178.99208238446724 far 
+
+74 ( 79 ) 1        in uturn 179.597164179685 fast
+( 79 ) 1 6 upcoming uturn 174.62505335896043 far 
+
+75 ( 80 ) 2        in uturn 179.9766673438407 fast
+( 80 ) 2 7 upcoming uturn 166.81525766042665 far 
+
+76 ( 81 ) 3        in uturn 179.9803091406623 fast
+( 81 ) 3 8 upcoming uturn 156.4707366873333 far 
+
+77 ( 82 ) 4        in uturn 179.99777084717005 fast
+( 82 ) 4 9 upcoming uturn 145.29975827805262 far 
+

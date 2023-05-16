@@ -1,0 +1,10 @@
+import requests
+
+url = "https://aig-forms-ocr.s3.amazonaws.com/attachments/sample2.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIASOL5QZRAMZVAMDB7%2F20230206%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20230206T102116Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjELv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQCLVW05gen0sFwM4bmqT4PCipVaTVKO4T5AUvOt6Ak1BwIhAJM0L4d5wUXUaCpfA46i6IaN5k9BdYiYwAJ4guGC6qAvKtwCCEMQABoMMTY4MzAzODQwMzIwIgwrJvJPjdXPjKG1D3EquQLFwA8XfzFCp%2Bcjta2Ew8dgteZkkAyif9HBuuR%2BDoaooWTnSQ3vqDrrdm0G%2BbPapWo2DWGANeOTJRdvaQfZFCUKaGzT2sP%2FiJJMfkqXX81%2FDkmbrPvSfS%2Fot4e3lkxPN7f6F5l1EW5ZoqpqF%2F%2BWIBhyrMkFKURcGg9gZ8tuM7iHDHETlbjkE0zD2QE5ymRsZPUSInet%2BiJNl0ylwqhAVjTsfdpowi7l4t6XjRwj1W7XknQhMGYsh%2FSRqz3mr8d0GABnybioUyKXH8GzLTnKdvQ6p%2FVkkRtFzWI%2FaGOB3ylOM0RspcYCYxsL7q0bQnEMB10iB0DJk4ctB2chhIdnKccvFLhec9w%2Fw5lMW7NREGwUATDHPZK8xbQjf8%2F1QOleHXg2FxH5WZdNBkkBxWdU2czIpZLf7FTe6jIWMOGkg58GOp0BV84IIXQLnx1uUssF2TyEULopsudwziE2vTQJEjtlz0XC7CjCEsT2BgxUzHIuQo%2BuyjOCKVknT%2BN1HzXjfzvdhhAPJ9%2Bgy2kS2DVGn70KJ8Yh0vkBXG%2FwoveTrrrEQtU4SnLumS%2F%2BuNMOz8SxvZJxfKZOkW8qY9RpW2CH9txX6GcgAUI88Bx%2BmGCoNS4Pvyq31Y5%2BwjMiYwSNJGGfZQ%3D%3D&X-Amz-Signature=40e5e50c30f499007cfee4843af278805e7d42ac6342bdf31b1bc9e07ef3b2aa"
+file_name = "sample2.txt"
+with open(file_name, "rb") as upload_file:
+    upload_text = upload_file.read()
+
+response = requests.put(url, data=upload_text, timeout=None)
+print(response)
+print(response.text)
