@@ -3,10 +3,10 @@ import math, time
 MAX_STEERING = 30
 MAX_SPEED = 4.0
 # waypoints. do not change as this will affect u-turn angle check.
-LOOKAHEAD_COVERAGE = 20
+LOOKAHEAD_COVERAGE = 30
 # when to consider uturn for immediate angle
 UTURN_THRESHOLD_DEGREE = 110
-DIRECTION_LOOKAHEAD = 10
+DIRECTION_LOOKAHEAD = 12
 
 
 def get_angle_between_coordinates(current_coor, next_coor):
@@ -134,7 +134,7 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 60
+    DIRECTION_LIMIT = 30
 
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
@@ -196,6 +196,7 @@ class Reward:
 
         self.uturn = False
         self.uturn_angle = int(self.track_data["uturn"])
+        self.uturn_angle = 180 if self.uturn_angle >= 170 else self.uturn_angle
         if self.uturn_angle < UTURN_THRESHOLD_DEGREE:
             self.uturn = True
 
@@ -209,7 +210,7 @@ class Reward:
         self.turn_direction_uturn = self.get_turn_direction(
             uturn_direction_angle_one, uturn_direction_angle_two
         )
-        self.revised_direction = self.track_data[0]["angles"][6]
+        self.revised_direction = self.track_data[0]["angles"][8]
         # self.revised_direction = self.track_data[0]["angles"][DIRECTION_LOOKAHEAD]
 
     def calc_direction_reward(self):
@@ -262,8 +263,8 @@ class Reward:
         else:
             self.direction_reward_steering = 1 - steering_error / Reward.DIRECTION_LIMIT
 
-        self.direction_reward_final = (self.direction_reward_main * 0.75) + (
-            self.direction_reward_steering * 0.25
+        self.direction_reward_final = (self.direction_reward_main * 0.67) + (
+            self.direction_reward_steering * 0.33
         )
 
         self.direction_reward = self.direction_reward_final / math.pow(
@@ -271,7 +272,11 @@ class Reward:
         )
 
     def calc_speed_reward(self):
-        self.speed_reward = math.pow(self.uturn_angle / 180, 2) * self.speed / MAX_SPEED
+        self.speed_reward = (
+            math.pow(self.direction_reward_main / 180, 2) * self.speed / MAX_SPEED
+        )
+        # self.speed_reward = self.speed / MAX_SPEED
+        # self.speed_reward = math.pow(self.uturn_angle / 180, 2) * self.speed / MAX_SPEED
 
     def calc_progress_reward(self, factor):
         self.progress_reward = 0.001
@@ -293,6 +298,8 @@ class Reward:
 
     def get_all_rewards(self, display=False):
         if display:
+            print("waypoint:", self.track_data[0]["waypoint"])
+            print(f"uturn_angle: {self.uturn_angle}")
             print(f"direction_reward: {self.direction_reward}")
             print(f"speed_reward: {self.speed_reward}")
             print(f"progress_reward: {self.progress_reward}")
@@ -303,6 +310,9 @@ class Reward:
             + self.progress_reward
             + self.lane_reward
         )
+
+        if self.lane_reward == 0:
+            total_rewards = 0
 
         return total_rewards
 

@@ -196,6 +196,7 @@ class Reward:
 
         self.uturn = False
         self.uturn_angle = int(self.track_data["uturn"])
+        self.uturn_angle = 180 if self.uturn_angle >= 170 else self.uturn_angle
         if self.uturn_angle < UTURN_THRESHOLD_DEGREE:
             self.uturn = True
 
@@ -262,8 +263,8 @@ class Reward:
         else:
             self.direction_reward_steering = 1 - steering_error / Reward.DIRECTION_LIMIT
 
-        self.direction_reward_final = (self.direction_reward_main * 0.75) + (
-            self.direction_reward_steering * 0.25
+        self.direction_reward_final = (self.direction_reward_main * 0.66) + (
+            self.direction_reward_steering * 0.33
         )
 
         self.direction_reward = self.direction_reward_final / math.pow(
@@ -303,6 +304,9 @@ class Reward:
             + self.progress_reward
             + self.lane_reward
         )
+
+        if self.lane_reward == 0:
+            total_rewards = 0
 
         return total_rewards
 
