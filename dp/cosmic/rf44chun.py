@@ -201,6 +201,7 @@ class Reward:
         self.steering = steering
         self.steering_angle = steering_angle
         self.is_left = is_left
+        self.track_width = track_width
         self.all_wheels_on_track = all_wheels_on_track
         self.steps = steps
         self.progress = progress
@@ -244,7 +245,7 @@ class Reward:
         )
 
     def calc_direction_reward(self):
-        direction_limit = 1
+        direction_limit = 2.5
         steering_error = 0
 
         self.direction_diff = get_direction_diff(

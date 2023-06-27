@@ -26,6 +26,30 @@ def get_direction_diff(first_direction, second_direction):
     return direction_diff
 
 
+def distance(x1, y1, x2, y2):
+    """Returns the distance between two points."""
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+
+def altitude(x1, y1, x2, y2, x3, y3):
+    """Returns the altitude of a scalene triangle given its three coordinates."""
+    # First, we find the length of each side of the triangle using the distance formula.
+    a = distance(x2, y2, x3, y3)
+    b = distance(x1, y1, x3, y3)
+    c = distance(x1, y1, x2, y2)
+
+    # Then, we calculate the semiperimeter of the triangle.
+    s = (a + b + c) / 2
+
+    # Next, we use Heron's formula to find the area of the triangle.
+    area = math.sqrt(s * (s - a) * (s - b) * (s - c))
+
+    # Finally, we use the formula for the altitude of a triangle to calculate the altitude.
+    h = (2 * area) / b
+
+    return h
+
+
 def get_upcoming_angle(A, B, C):
     def lengthSquare(X, Y):
         xDiff = X[0] - Y[0]
@@ -181,6 +205,36 @@ class Reward:
             direction = 0
         return direction
 
+    def get_revised_direction(self):
+        try:
+            A_position = 0
+            B_position = DIRECTION_LOOKAHEAD // 2
+            C_position = DIRECTION_LOOKAHEAD * 2
+            acceptable_height = self.track_width / 2
+
+            revised_direction = self.track_data[0]["angles"][B_position]
+
+            A = self.track_data[A_position]["coordinates"]
+            B = self.track_data[B_position]["coordinates"]
+
+            edge_hit = False
+
+            for count in range(B_position + 1, C_position + 1):
+                C = self.track_data[count]["coordinates"]
+                height = altitude(A[0], A[1], B[0], B[1], C[0], C[1])
+                if height <= acceptable_height:
+                    revised_direction = self.track_data[0]["angles"][count]
+                else:
+                    edge_hit = True
+                    break
+
+            if edge_hit:
+                return revised_direction
+            else:
+                return self.track_data[0]["angles"][1]
+        except Exception as error:
+            print(error)
+
     def __init__(
         self,
         heading,
@@ -235,7 +289,8 @@ class Reward:
             self.track_data[actual_direction]["coordinates"],
         )
         # self.revised_direction = halfuturn_direction_angle_two
-        self.revised_direction = self.track_data[0]["angles"][actual_direction]
+        # self.revised_direction = self.track_data[0]["angles"][actual_direction]
+        self.revised_direction = self.get_revised_direction()
 
         current_coordinate = self.track_data[0]["coordinates"]
         mid_coordinate = self.track_data[actual_direction // 2]["coordinates"]
@@ -245,7 +300,7 @@ class Reward:
         )
 
     def calc_direction_reward(self):
-        direction_limit = 2.5
+        direction_limit = 1
         steering_error = 0
 
         self.direction_diff = get_direction_diff(
@@ -296,7 +351,7 @@ class Reward:
             self.direction_reward = 0.001
         else:
             self.direction_reward = self.direction_reward_final / math.pow(
-                self.direction_factor, 1
+                self.direction_factor, 2
             )
 
     def calc_speed_reward(self):
@@ -308,13 +363,12 @@ class Reward:
 
         # self.speed_reward = math.pow(self.uturn_angle / 180, 2) * self.speed / MAX_SPEED
 
-        # self.speed_reward = math.pow(self.direction_factor, 2) * self.speed / MAX_SPEED
-        if self.direction_reward_final < 0:
-            self.speed_reward = 0.001
-        else:
-            self.speed_reward = (
-                math.pow(self.direction_reward_final, 2) * self.speed / MAX_SPEED
-            )
+        self.speed_reward = math.pow(self.direction_factor, 2) * self.speed / MAX_SPEED
+        # self.speed_reward = (
+        #     math.pow(self.direction_reward_final, 2) * self.speed / MAX_SPEED
+        # )
+        # if self.direction_reward_final < 0:
+        #     self.speed_reward *= -1
 
     def calc_progress_reward(self, factor):
         self.progress_reward = 0
