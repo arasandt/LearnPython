@@ -6,7 +6,7 @@ MAX_SPEED = 4.0
 LOOKAHEAD_COVERAGE = 30
 # when to consider uturn for immediate angle
 UTURN_THRESHOLD_DEGREE = 108
-DIRECTION_LOOKAHEAD = 4
+DIRECTION_LOOKAHEAD = 8
 
 
 def get_angle_between_coordinates(current_coor, next_coor):
@@ -171,7 +171,7 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 45
+    DIRECTION_LIMIT = 100
 
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
@@ -248,7 +248,7 @@ class Reward:
             uturn_direction_angle_one, uturn_direction_angle_two
         )
 
-        actual_direction = int(DIRECTION_LOOKAHEAD * 2)
+        actual_direction = int(DIRECTION_LOOKAHEAD)
         halfuturn_direction_angle_two = get_angle_between_coordinates(
             self.track_data["p98"]["coordinates"],
             self.track_data[actual_direction]["coordinates"],
@@ -260,9 +260,11 @@ class Reward:
         #     self.track_data[actual_direction]["coordinates"],
         # )
 
-        current_coordinate = self.track_data[0]["coordinates"]
+        current_coordinate = self.track_data["p98"]["coordinates"]
         mid_coordinate = self.track_data[actual_direction // 2]["coordinates"]
-        last_coordinate = self.track_data[actual_direction]["coordinates"]
+        last_coordinate = self.track_data[actual_direction // 2 + actual_direction][
+            "coordinates"
+        ]
         self.current_angle = get_upcoming_angle(
             current_coordinate, mid_coordinate, last_coordinate
         )
@@ -305,24 +307,26 @@ class Reward:
             self.direction_reward_steering * 0
         )
 
-        self.direction_factor = (self.uturn_angle * 1 + self.current_angle * 0) / 180
+        self.direction_factor = self.uturn_angle / 180
 
         # let this reward be negative but only be careful of square of negative
         # if self.direction_reward_final <= 0:
-        #     self.direction_reward = 0.001
+        #     self.direction_reward = 0
+        #     # print(self.track_data[0])
+        #     # print(self.heading)
+        #     # print(self.revised_direction)
+        #     # time.sleep(60)
         # else:
-        # self.direction_reward = self.direction_reward_final / math.pow(
-        #     self.direction_factor, 1
-        # )
-        self.direction_reward = 0  # self.direction_reward_final
+        #     self.direction_reward = self.direction_reward_final / self.direction_factor
+
+        self.direction_reward = 0
 
     def calc_speed_reward(self):
-        # self.direction_weight = (1 - self.uturn_angle / 180) * 6
-        self.direction_weight = (1 - self.current_angle / 180) + (
-            1 - self.uturn_angle / 180
-        )
-
-        self.direction_weight *= 5
+        self.direction_weight = (1 - self.current_angle / 180) * 12
+        # self.direction_weight = (1 - self.current_angle / 180) + (
+        #     1 - self.uturn_angle / 180
+        # )
+        # self.direction_weight *= 6
         # self.direction_weight += 2
 
         self.speed_reward = (
@@ -342,15 +346,15 @@ class Reward:
         #     self.progress_reward = factor * self.progress_reward
 
     def calc_lane_reward(self):
-        self.lane_reward = 1
+        self.lane_reward = 0
 
-        if self.uturn:
-            if (self.turn_direction_uturn == "left" and self.is_left) or (
-                self.turn_direction_uturn == "right" and not self.is_left
-            ):
-                self.lane_reward = 1
-            else:
-                self.lane_reward = 0
+        # if self.uturn:
+        #     if (self.turn_direction_uturn == "left" and self.is_left) or (
+        #         self.turn_direction_uturn == "right" and not self.is_left
+        #     ):
+        #         self.lane_reward = 1
+        #     else:
+        #         self.lane_reward = 0
 
     def get_all_rewards(self, display=False):
         total_rewards = (
@@ -375,8 +379,8 @@ class Reward:
             print(f"progress_reward: {self.progress_reward}")
             print(f"lane_reward: {self.lane_reward}")
 
-        if self.lane_reward == 0:
-            total_rewards = 0
+        # if self.lane_reward == 0:
+        #     total_rewards = 0
 
         return total_rewards
 

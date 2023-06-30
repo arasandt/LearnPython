@@ -6,7 +6,7 @@ MAX_SPEED = 4.0
 LOOKAHEAD_COVERAGE = 30
 # when to consider uturn for immediate angle
 UTURN_THRESHOLD_DEGREE = 108
-DIRECTION_LOOKAHEAD = 4
+DIRECTION_LOOKAHEAD = 6
 
 
 def get_angle_between_coordinates(current_coor, next_coor):
@@ -171,7 +171,7 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 45
+    DIRECTION_LIMIT = 90
 
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
@@ -248,7 +248,7 @@ class Reward:
             uturn_direction_angle_one, uturn_direction_angle_two
         )
 
-        actual_direction = int(DIRECTION_LOOKAHEAD * 2)
+        actual_direction = int(DIRECTION_LOOKAHEAD)
         halfuturn_direction_angle_two = get_angle_between_coordinates(
             self.track_data["p98"]["coordinates"],
             self.track_data[actual_direction]["coordinates"],
@@ -340,7 +340,6 @@ class Reward:
                 self.turn_direction_uturn == "right" and not self.is_left
             ):
                 self.lane_reward = 1
-                # self.lane_reward = min(1, self.border_reward * 2)
             else:
                 self.lane_reward = 0
 

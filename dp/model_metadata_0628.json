@@ -1,0 +1,40 @@
+{
+    "action_space": [{
+            "speed": 0.8,
+            "steering_angle": 30
+        }, {
+            "speed": 0.8,
+            "steering_angle": -30
+        }, {
+            "speed": 1.6,
+            "steering_angle": 23.34
+        }, {
+            "speed": 1.6,
+            "steering_angle": -23.34
+        }, {
+            "speed": 2.4,
+            "steering_angle": 16.68
+        }, {
+            "speed": 2.4,
+            "steering_angle": -16.68
+        }, {
+            "speed": 3.2,
+            "steering_angle": 10.02
+        }, {
+            "speed": 3.2,
+            "steering_angle": -10.02
+        }, {
+            "speed": 4.0,
+            "steering_angle": 3.36
+        }, {
+            "speed": 4.0,
+            "steering_angle": -3.36
+        }
+    ],
+    "sensor": ["FRONT_FACING_CAMERA"],
+    "neural_network": "DEEP_CONVOLUTIONAL_NETWORK_SHALLOW",
+    "training_algorithm": "clipped_ppo",
+    "action_space_type": "discrete",
+    "version": "5.0"
+}
+

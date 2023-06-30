@@ -171,7 +171,7 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 45
+    DIRECTION_LIMIT = 90
 
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
@@ -248,7 +248,7 @@ class Reward:
             uturn_direction_angle_one, uturn_direction_angle_two
         )
 
-        actual_direction = int(DIRECTION_LOOKAHEAD * 1)
+        actual_direction = int(DIRECTION_LOOKAHEAD)
         halfuturn_direction_angle_two = get_angle_between_coordinates(
             self.track_data["p98"]["coordinates"],
             self.track_data[actual_direction]["coordinates"],
@@ -317,12 +317,11 @@ class Reward:
         self.direction_reward = 0  # self.direction_reward_final
 
     def calc_speed_reward(self):
-        # self.direction_weight = (1 - self.uturn_angle / 180) * 6
-        self.direction_weight = (1 - self.current_angle / 180) + (
-            1 - self.uturn_angle / 180
-        )
-
-        self.direction_weight *= 6
+        self.direction_weight = (1 - self.uturn_angle / 180) * 12
+        # self.direction_weight = (1 - self.current_angle / 180) + (
+        #     1 - self.uturn_angle / 180
+        # )
+        # self.direction_weight *= 6
         # self.direction_weight += 2
 
         self.speed_reward = (
@@ -332,7 +331,7 @@ class Reward:
         )
 
         if self.direction_reward_final < 0:
-            self.speed_reward *= -1
+            self.speed_reward = 0
 
     def calc_progress_reward(self, factor):
         self.progress_reward = 0
