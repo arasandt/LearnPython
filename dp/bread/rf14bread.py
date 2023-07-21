@@ -253,8 +253,12 @@ class Reward:
 
         self.speed_reward = math.pow(abs(self.direction_error), 2) * new_speed_factor
 
-        if self.direction_error < 0:
-            self.speed_reward = 0
+        if self.internal_angle < CORRECT_LANE_THRESHOLD_DEGREE + 30:
+            self.speed_reward = (
+                math.pow(abs(self.direction_error), 2)
+                * MAX_SPEED
+                / (MAX_SPEED + self.speed)
+            )
 
     def calc_lane_reward(self):
         self.lane_reward = 1

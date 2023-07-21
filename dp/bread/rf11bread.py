@@ -251,7 +251,7 @@ class Reward:
             # direction is good
             current_weight = (180 - self.current_angle) / direction_divisor
             upcoming_weight = (180 - self.upcoming_angle) / direction_divisor
-            direction_weight = (current_weight + upcoming_weight) / 2
+            direction_weight = current_weight * 1 + upcoming_weight * 0
 
             self.direction_reward = abs(direction_weight - self.steering)
 

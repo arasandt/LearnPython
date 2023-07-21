@@ -2,8 +2,8 @@ import math, time
 
 MAX_STEERING = 30
 MAX_SPEED = 4.0
-CORRECT_LANE_THRESHOLD_DEGREE = 90
-DIRECTION_LOOKAHEAD = 10
+CORRECT_LANE_THRESHOLD_DEGREE = 108
+DIRECTION_LOOKAHEAD = 8
 # waypoints. do not change as this will affect u-turn angle check.
 # when to consider uturn for immediate angle
 LOOKAHEAD_COVERAGE = int(DIRECTION_LOOKAHEAD * 2.5)
@@ -134,7 +134,7 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 100
+    DIRECTION_LIMIT = 180
 
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
@@ -235,25 +235,46 @@ class Reward:
     def calc_direction_reward(self):
         self.direction_reward = 0
 
+        self.turn_direction = self.get_turn_direction(
+            self.track_data[0]["angles"][1], self.revised_direction
+        )
+        self.direction_angle_diff = get_direction_diff(
+            self.track_data[0]["angles"][1], self.revised_direction
+        )
+
+        self.correct_turn_direction = self.get_turn_direction(
+            self.heading, self.revised_direction
+        )
         self.correct_direction_angle_diff = get_direction_diff(
             self.heading, self.revised_direction
         )
+
+        if self.correct_direction_angle_diff <= 1:
+            self.correct_direction_angle_diff = 0
+
+        if (
+            self.correct_direction_angle_diff > self.direction_angle_diff / 2
+            and self.turn_direction == self.correct_turn_direction
+        ):
+            self.correct_direction_angle_diff += self.direction_angle_diff
+        elif self.correct_direction_angle_diff > self.direction_angle_diff and not (
+            self.turn_direction == self.correct_turn_direction
+        ):
+            self.correct_direction_angle_diff += self.direction_angle_diff
+
+    def calc_speed_reward(self):
+        # current_weight = (1 - self.current_angle / 180) + 0.01
+        # upcoming_weight = (1 - self.upcoming_angle / 180) + 0.01
+        # internal_weight = (1 - self.internal_angle / 180) + 0.01
+        # direction_weight = (current_weight + upcoming_weight + internal_weight) / 3
 
         self.direction_error = (
             1 - self.correct_direction_angle_diff / Reward.DIRECTION_LIMIT
         )
 
-    def calc_speed_reward(self):
-        current_weight = self.current_angle / 180
-        upcoming_weight = self.upcoming_angle / 180
-        internal_weight = self.internal_angle / 180
-        direction_weight = (current_weight + upcoming_weight + internal_weight) / 3
+        self.speed_reward = math.pow(self.direction_error, 2) * self.speed / MAX_SPEED
 
-        new_speed_factor = min(1, self.speed / (MAX_SPEED * direction_weight))
-
-        self.speed_reward = math.pow(abs(self.direction_error), 2) * new_speed_factor
-
-        if self.direction_error < 0:
+        if self.direction_error <= 0:
             self.speed_reward = 0
 
     def calc_lane_reward(self):
@@ -270,17 +291,28 @@ class Reward:
     def get_all_rewards(self, display=False):
         total_rewards = self.direction_reward + self.speed_reward + self.lane_reward
 
-        if display:
+        if display:  # or self.speed_reward == 0:
+            # if display or int(self.track_data[0]["waypoint"]) in [
+            #     84,
+            #     85,
+            #     86,
+            #     87,
+            #     88,
+            #     89,
+            #     90,
+            # ]:
             print("waypoint:", self.track_data[0]["waypoint"])
-            print(f"current_angle: {self.current_angle}")
-            print(f"upcoming_angle: {self.upcoming_angle}")
             print(f"heading: {self.heading}")
             print(f"revised_direction: {self.revised_direction}")
+            print(f"direction_angle_diff: {self.direction_angle_diff}")
+            print(
+                f"turn_direction == correct_turn_direction: {self.turn_direction} == {self.correct_turn_direction} "
+            )
+            print(f"correct_direction_angle_diff: {self.correct_direction_angle_diff}")
             print(f"direction_error: {self.direction_error}")
-            print(f"direction_reward: {self.direction_reward}")
+            print(f"speed: {self.speed}")
             print(f"speed_reward: {self.speed_reward}")
             print(f"total_rewards: {total_rewards}")
-            print(f"lane_reward: {self.lane_reward}")
 
         if self.lane_reward == 0:
             total_rewards = 0

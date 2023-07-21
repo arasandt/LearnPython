@@ -1,11 +1,12 @@
 import math, time
 
-MAX_STEERING = 30
-MAX_SPEED = 4.0
-CORRECT_LANE_THRESHOLD_DEGREE = 90
-DIRECTION_LOOKAHEAD = 10
 # waypoints. do not change as this will affect u-turn angle check.
 # when to consider uturn for immediate angle
+DIRECTION_LOOKAHEAD = 10  # always + 2
+
+MAX_STEERING = 30
+MAX_SPEED = 4.0
+CORRECT_LANE_THRESHOLD_DEGREE = 180 - 9 * DIRECTION_LOOKAHEAD
 LOOKAHEAD_COVERAGE = int(DIRECTION_LOOKAHEAD * 2.5)
 
 
@@ -80,7 +81,7 @@ class Track:
         # Get upcoming waypoints and their coordinates from current position
         upcoming_waypoints = [
             self.get_next_waypoint(self.closest_waypoints[1], point)
-            for point in range(LOOKAHEAD_COVERAGE + 1)
+            for point in range(LOOKAHEAD_COVERAGE)
         ]
 
         upcoming_coordinates = [self.waypoints[point] for point in upcoming_waypoints]
@@ -134,8 +135,6 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 100
-
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
         window = 90
@@ -206,29 +205,36 @@ class Reward:
         self.border_reward = 1 - self.midline_reward
 
         ##### DIRECTION STARTS #####
-        actual_direction = int(DIRECTION_LOOKAHEAD)
-        self.revised_direction = self.track_data[0]["angles"][actual_direction]
+        self.revised_direction = self.track_data[0]["angles"][DIRECTION_LOOKAHEAD]
 
         self.current_angle, self.current_angle_turn_direction = self.get_angle_and_turn(
-            self.track_data["p" + str(actual_direction)]["coordinates"],
+            self.track_data["p" + str(DIRECTION_LOOKAHEAD)]["coordinates"],
             self.track_data[0]["coordinates"],
-            self.track_data[actual_direction]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
+        )
+        (
+            self.half_current_angle,
+            self.half_current_angle_turn_direction,
+        ) = self.get_angle_and_turn(
+            self.track_data["p" + str(int(DIRECTION_LOOKAHEAD // 2))]["coordinates"],
+            self.track_data[0]["coordinates"],
+            self.track_data[int(DIRECTION_LOOKAHEAD // 2)]["coordinates"],
         )
         (
             self.internal_angle,
             self.internal_turn_direction,
         ) = self.get_angle_and_turn(
             self.track_data[0]["coordinates"],
-            self.track_data[int(actual_direction // 2)]["coordinates"],
-            self.track_data[actual_direction]["coordinates"],
+            self.track_data[int(DIRECTION_LOOKAHEAD // 2)]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
         )
         (
             self.upcoming_angle,
             self.upcoming_angle_turn_direction,
         ) = self.get_angle_and_turn(
             self.track_data[0]["coordinates"],
-            self.track_data[actual_direction]["coordinates"],
-            self.track_data[actual_direction * 2]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD * 2]["coordinates"],
         )
         ##### DIRECTION ENDS #####
 
@@ -239,8 +245,25 @@ class Reward:
             self.heading, self.revised_direction
         )
 
-        self.direction_error = (
-            1 - self.correct_direction_angle_diff / Reward.DIRECTION_LIMIT
+        self.direction_error_one = 1 - self.correct_direction_angle_diff / 180
+        self.direction_error_one = max(0, self.direction_error_one)
+        self.direction_error_two = 1 - self.correct_direction_angle_diff / 135
+        self.direction_error_two = max(0, self.direction_error_two)
+        self.direction_error_three = 1 - self.correct_direction_angle_diff / 90
+        self.direction_error_three = max(0, self.direction_error_three)
+        self.direction_error_four = 1 - self.correct_direction_angle_diff / 45
+        self.direction_error_four = max(0, self.direction_error_four)
+
+        self.direction_reward = (
+            self.direction_error_one
+            + self.direction_error_two
+            + self.direction_error_three
+            + self.direction_error_four
+        ) / 4
+
+        self.direction_diff = get_direction_diff(
+            self.track_data[0]["angles"][1],
+            self.revised_direction,
         )
 
     def calc_speed_reward(self):
@@ -249,26 +272,63 @@ class Reward:
         internal_weight = self.internal_angle / 180
         direction_weight = (current_weight + upcoming_weight + internal_weight) / 3
 
-        new_speed_factor = min(1, self.speed / (MAX_SPEED * direction_weight))
+        if self.direction_diff <= 90:
+            self.speed_reward = direction_weight * self.speed / MAX_SPEED
+        else:
+            self.speed_reward = (MAX_SPEED / self.speed) / direction_weight
 
-        self.speed_reward = math.pow(abs(self.direction_error), 2) * new_speed_factor
+        self.direction_reward = self.direction_reward / direction_weight
 
-        if self.direction_error < 0:
-            self.speed_reward = 0
+        # acceptable_angle = 10
+
+        # if self.correct_direction_angle_diff > acceptable_angle:
+        #     self.speed_reward = self.speed_reward / (
+        #         2
+        #         + (self.correct_direction_angle_diff - acceptable_angle)
+        #         / acceptable_angle
+        #     )
+
+        #     if (
+        #         self.half_current_angle_turn_direction == "right"
+        #         and self.steering_angle > acceptable_angle
+        #     ) or (
+        #         self.half_current_angle_turn_direction == "left"
+        #         and self.steering_angle < -acceptable_angle
+        #     ):
+        #         self.speed_reward = self.speed_reward / (
+        #             2
+        #             + (
+        #                 self.correct_direction_angle_diff
+        #                 - acceptable_angle
+        #                 + self.steering
+        #             )
+        #             / acceptable_angle
+        #         )
 
     def calc_lane_reward(self):
         self.lane_reward = 1
 
-        if self.current_angle < CORRECT_LANE_THRESHOLD_DEGREE:
-            if (self.current_angle_turn_direction == "left" and self.is_left) or (
-                self.current_angle_turn_direction == "right" and not self.is_left
+        if self.half_current_angle < CORRECT_LANE_THRESHOLD_DEGREE:
+            if (self.half_current_angle_turn_direction == "left" and self.is_left) or (
+                self.half_current_angle_turn_direction == "right" and not self.is_left
             ):
                 self.lane_reward = 1
             else:
                 self.lane_reward = 0
 
+    def calc_progress_reward(self):
+        self.progress_reward = 0
+
+        if self.steps > 5:
+            self.progress_reward = self.progress / self.steps
+
     def get_all_rewards(self, display=False):
-        total_rewards = self.direction_reward + self.speed_reward + self.lane_reward
+        total_rewards = (
+            self.direction_reward
+            + self.speed_reward
+            + self.lane_reward
+            + self.progress_reward
+        )
 
         if display:
             print("waypoint:", self.track_data[0]["waypoint"])
@@ -276,7 +336,7 @@ class Reward:
             print(f"upcoming_angle: {self.upcoming_angle}")
             print(f"heading: {self.heading}")
             print(f"revised_direction: {self.revised_direction}")
-            print(f"direction_error: {self.direction_error}")
+            # print(f"direction_error: {self.direction_error}")
             print(f"direction_reward: {self.direction_reward}")
             print(f"speed_reward: {self.speed_reward}")
             print(f"total_rewards: {total_rewards}")
@@ -334,6 +394,7 @@ def reward_function(params):
         reward.calc_direction_reward()
         reward.calc_speed_reward()
         reward.calc_lane_reward()
+        reward.calc_progress_reward()
 
         rewards = reward.get_all_rewards()
 

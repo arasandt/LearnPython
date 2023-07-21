@@ -134,7 +134,7 @@ class Track:
 
 
 class Reward:
-    DIRECTION_LIMIT = 100
+    DIRECTION_LIMIT = 90
 
     @staticmethod
     def get_turn_direction(immediate_direction, lookahead_direction):
@@ -243,15 +243,23 @@ class Reward:
             1 - self.correct_direction_angle_diff / Reward.DIRECTION_LIMIT
         )
 
+        self.entry_direction_angle_diff = get_direction_diff(
+            self.heading, self.track_data[0]["angles"][1]
+        )
+
     def calc_speed_reward(self):
         current_weight = self.current_angle / 180
         upcoming_weight = self.upcoming_angle / 180
         internal_weight = self.internal_angle / 180
         direction_weight = (current_weight + upcoming_weight + internal_weight) / 3
 
-        new_speed_factor = min(1, self.speed / (MAX_SPEED * direction_weight))
+        new_speed_factor = self.speed / MAX_SPEED
+        # new_speed_factor = min(1, self.speed / (MAX_SPEED * direction_weight))
 
         self.speed_reward = math.pow(abs(self.direction_error), 2) * new_speed_factor
+
+        if self.entry_direction_angle_diff > 15:
+            self.speed_reward /= 2
 
         if self.direction_error < 0:
             self.speed_reward = 0
