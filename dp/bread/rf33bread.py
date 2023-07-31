@@ -273,13 +273,13 @@ class Reward:
         current_factor = (270 - self.current_angle) / 90
         upcoming_factor = (270 - self.upcoming_angle) / 90
 
+        direction_weight = (current_weight + upcoming_weight) / 2
         if not (
             self.current_angle_turn_direction == self.upcoming_angle_turn_direction
         ):
             upcoming_factor *= -1
-            upcoming_weight *= -1
+            direction_weight = 1 - abs(current_weight - upcoming_weight) / 2
 
-        direction_weight = abs(current_weight + upcoming_weight) / 2
         direction_factor = abs(current_factor + upcoming_factor) / 2
 
         self.speed_reward = (
@@ -288,7 +288,7 @@ class Reward:
             / MAX_SPEED
         )
 
-        self.direction_reward = self.direction_reward / max(1, direction_weight)
+        self.direction_reward = self.direction_reward / direction_weight
 
     def calc_lane_reward(self):
         self.lane_reward = 1
