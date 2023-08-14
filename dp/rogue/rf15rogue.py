@@ -2,7 +2,7 @@ import math, time
 
 # waypoints. do not change as this will affect u-turn angle check.
 # when to consider uturn for immediate angle
-DIRECTION_LOOKAHEAD = 7  # always + 2
+DIRECTION_LOOKAHEAD = 8  # always + 2
 
 MAX_STEERING = 30
 MAX_SPEED = 4.0
@@ -308,12 +308,18 @@ class Reward:
         # self.direction_reward = self.direction_error * MAX_SPEED
 
     def calc_speed_reward(self):
-        if self.direction_error:
-            self.speed_reward = (
-                math.pow(self.direction_error, 1) * self.speed / MAX_SPEED
-            )
-        else:
+        self.speed_reward = self.speed / MAX_SPEED
+        if self.current_angle <= 90:
+            self.direction_reward = self.direction_error * 90 / self.current_angle
             self.speed_reward = 0
+        else:
+            self.direction_reward = 0
+        # if self.direction_error:
+        #     self.speed_reward = (
+        #         math.pow(self.direction_error, 1) * self.speed / MAX_SPEED
+        #     )
+        # else:
+        #     self.speed_reward = 0
 
     def calc_lane_reward(self):
         self.lane_reward = 1

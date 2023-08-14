@@ -2,11 +2,11 @@ import math, time
 
 # waypoints. do not change as this will affect u-turn angle check.
 # when to consider uturn for immediate angle
-DIRECTION_LOOKAHEAD = 8  # always + 2
+DIRECTION_LOOKAHEAD = 6  # always + 2
 
 MAX_STEERING = 30
 MAX_SPEED = 4.0
-CORRECT_LANE_THRESHOLD_DEGREE = 180 - 9 * (DIRECTION_LOOKAHEAD + 1)
+CORRECT_LANE_THRESHOLD_DEGREE = 180 - 9 * DIRECTION_LOOKAHEAD
 LOOKAHEAD_COVERAGE = int(DIRECTION_LOOKAHEAD * 2.5)
 
 
@@ -185,6 +185,7 @@ class Reward:
         steps,
         progress,
         heading_coordinates,
+        progress_factor,
         track_data,
     ):
         self.heading = heading
@@ -197,6 +198,7 @@ class Reward:
         self.steps = steps
         self.progress = progress
         self.heading_coordinates = heading_coordinates
+        self.progress_factor = progress_factor
         self.track_data = track_data
 
         self.midline_reward = (0.5 * track_width) / (
@@ -241,6 +243,11 @@ class Reward:
         #     self.track_data[0]["coordinates"],
         #     self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
         #     self.track_data[DIRECTION_LOOKAHEAD * 2]["coordinates"],
+        # )
+
+        # self.revised_direction = get_angle_between_coordinates(
+        #     self.track_data["p" + str(DIRECTION_LOOKAHEAD)]["coordinates"],
+        #     self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
         # )
 
         self.anchor_direction = self.track_data[0]["angles"][1]
@@ -291,48 +298,74 @@ class Reward:
             angle_anchor_and_forward_turn_direction == "left"
             and self.steering_angle >= 0
         ):
+            # steering is correct
             if (
                 angle_anchor_and_heading_turn_direction
-                == angle_forward_and_heading_turn_direction
-            ) and angle_forward_and_heading <= angle_anchor_and_forward:
-                self.direction_error = 1 - (angle_forward_and_heading / 2) / 60
-                self.speed *= 2
+                == angle_anchor_and_forward_turn_direction
+            ):
+                # heading is same as anchor
+                self.direction_error = 1
+                if angle_anchor_and_heading > angle_anchor_and_forward:
+                    # heading is more than forward.
+                    self.direction_error = angle_forward_and_heading
             else:
-                self.direction_error = 1 - angle_forward_and_heading / 60
+                # heading in opposite direction
+                self.direction_error = angle_anchor_and_heading * 2
         else:
-            self.direction_error = 1 - (angle_forward_and_heading * 2) / 60
-            self.speed /= 2
+            # steering angle is wrong
+            self.direction_error = angle_anchor_and_heading * 4
 
-        self.direction_error = max(0, self.direction_error)
-
-        # self.direction_reward = self.direction_error * MAX_SPEED
+        self.direction_error = max(1, self.direction_error)
 
     def calc_speed_reward(self):
-        self.speed_reward = self.speed / MAX_SPEED
-        if self.current_angle <= 90:
-            self.direction_reward = self.direction_error * 90 / self.current_angle
-            self.speed_reward = 0
-        else:
-            self.direction_reward = 0
-        # if self.direction_error:
-        #     self.speed_reward = (
-        #         math.pow(self.direction_error, 1) * self.speed / MAX_SPEED
-        #     )
-        # else:
-        #     self.speed_reward = 0
+        actual_heading = self.heading + self.steering_angle / 2
+        if actual_heading > 180:
+            actual_heading = actual_heading - 360
+        elif actual_heading < -180:
+            actual_heading = 360 + actual_heading
+
+        correct_direction_angle_diff = get_direction_diff(
+            actual_heading, self.forward_direction
+        )
+        correct_direction_angle_diff = int(correct_direction_angle_diff)
+        factor_base = (180 - self.current_angle) / 15
+        factor = 360 / math.pow(2, factor_base)
+        correct_direction_angle_diff = max(0, 1 - correct_direction_angle_diff / factor)
+
+        self.speed_reward = correct_direction_angle_diff * self.speed / MAX_SPEED
+
+        self.speed_reward = self.speed_reward / math.pow(
+            self.current_angle / 180, factor_base
+        )
+
+        # if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
+        #     if (self.turn_direction == "right" and self.steering_angle < 0) or (
+        #         self.turn_direction == "left" and self.steering_angle > 0
+        #     ):
+        #         self.speed_reward = math.pow(self.speed / MAX_SPEED, 0.5)
+        #     else:
+        #         self.speed_reward = 0
 
     def calc_lane_reward(self):
-        self.lane_reward = 1
+        self.lane_reward = 0
 
-        if (self.turn_direction == "left" and self.is_left) or (
-            self.turn_direction == "right" and not self.is_left
-        ):
-            self.lane_reward = 1
-        else:
-            self.lane_reward = 0
+        # if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE and self.speed_reward:
+        #     if (self.turn_direction == "left" and self.is_left) or (
+        #         self.turn_direction == "right" and not self.is_left
+        #     ):
+        #         self.lane_reward = min(2, self.border_reward * 4)
+        #         if not self.all_wheels_on_track:
+        #             self.lane_reward = 2
+
+        #         self.lane_reward = math.pow(self.lane_reward, 2)
+        #     else:
+        #         self.speed_reward = 0
 
     def get_all_rewards(self, display=False):
         total_rewards = self.direction_reward + self.speed_reward + self.lane_reward
+
+        if self.steps <= 5:
+            total_rewards = self.speed / MAX_SPEED
 
         if display:
             print("waypoint:", self.track_data[0]["waypoint"])
@@ -372,7 +405,7 @@ def reward_function(params):
         a = x + (2 * math.cos(math.radians(heading)))
         b = y + (2 * math.sin(math.radians(heading)))
         heading_coordinates = {"xy": (x, y), "ab": (a, b)}
-
+        progress_factor = 100 / (len(waypoints) * 1.25)
         track = Track(closest_waypoints, waypoints)
         track_data = track.get_track_data()
 
@@ -388,6 +421,7 @@ def reward_function(params):
             steps,
             progress,
             heading_coordinates,
+            progress_factor,
             track_data,
         )
 

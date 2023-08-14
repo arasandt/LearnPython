@@ -185,6 +185,7 @@ class Reward:
         steps,
         progress,
         heading_coordinates,
+        progress_factor,
         track_data,
     ):
         self.heading = heading
@@ -197,6 +198,7 @@ class Reward:
         self.steps = steps
         self.progress = progress
         self.heading_coordinates = heading_coordinates
+        self.progress_factor = progress_factor
         self.track_data = track_data
 
         self.midline_reward = (0.5 * track_width) / (
@@ -283,6 +285,7 @@ class Reward:
 
         self.turn_direction = angle_anchor_and_forward_turn_direction
         self.turn_angle = angle_anchor_and_forward
+        self.direction_diff = angle_anchor_and_heading
 
         if (
             angle_anchor_and_forward_turn_direction == "right"
@@ -291,35 +294,42 @@ class Reward:
             angle_anchor_and_forward_turn_direction == "left"
             and self.steering_angle >= 0
         ):
+            # steering is correct
             if (
                 angle_anchor_and_heading_turn_direction
-                == angle_forward_and_heading_turn_direction
-            ) and angle_forward_and_heading <= angle_anchor_and_forward:
-                self.direction_error = 1 - (angle_forward_and_heading / 2) / 60
-                self.speed *= 2
+                == angle_anchor_and_forward_turn_direction
+            ):
+                # heading is same as anchor
+                self.direction_error = 1
+                if angle_anchor_and_heading > angle_anchor_and_forward:
+                    # heading is more than forward.
+                    self.direction_error = angle_forward_and_heading
             else:
-                self.direction_error = 1 - angle_forward_and_heading / 60
+                # heading in opposite direction
+                self.direction_error = angle_anchor_and_heading * 2
         else:
-            self.direction_error = 1 - (angle_forward_and_heading * 2) / 60
-            self.speed /= 2
+            # steering angle is wrong
+            self.direction_error = angle_anchor_and_heading * 4
 
-        self.direction_error = max(0, self.direction_error)
-
-        # self.direction_reward = self.direction_error * MAX_SPEED
+        self.direction_error = max(1, self.direction_error)
 
     def calc_speed_reward(self):
         self.speed_reward = self.speed / MAX_SPEED
         if self.current_angle <= 90:
-            self.direction_reward = self.direction_error * 90 / self.current_angle
             self.speed_reward = 0
-        else:
-            self.direction_reward = 0
-        # if self.direction_error:
-        #     self.speed_reward = (
-        #         math.pow(self.direction_error, 1) * self.speed / MAX_SPEED
-        #     )
-        # else:
-        #     self.speed_reward = 0
+            if (self.turn_direction == "right" and self.steering_angle <= 0) or (
+                self.turn_direction == "left" and self.steering_angle >= 0
+            ):
+                self.direction_reward = 1 - self.direction_diff / 60
+                
+                if self.progress == 100:
+                    self.direction_reward += (
+                        self.progress / self.steps
+                    ) / self.progress_factor
+                else:
+                    self.direction_reward += 1
+            else:
+                self.direction_reward = 0
 
     def calc_lane_reward(self):
         self.lane_reward = 1
@@ -372,7 +382,7 @@ def reward_function(params):
         a = x + (2 * math.cos(math.radians(heading)))
         b = y + (2 * math.sin(math.radians(heading)))
         heading_coordinates = {"xy": (x, y), "ab": (a, b)}
-
+        progress_factor = 100 / (len(waypoints) * 1.25)
         track = Track(closest_waypoints, waypoints)
         track_data = track.get_track_data()
 
@@ -388,6 +398,7 @@ def reward_function(params):
             steps,
             progress,
             heading_coordinates,
+            progress_factor,
             track_data,
         )
 

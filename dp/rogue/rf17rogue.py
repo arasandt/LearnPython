@@ -291,35 +291,34 @@ class Reward:
             angle_anchor_and_forward_turn_direction == "left"
             and self.steering_angle >= 0
         ):
+            # steering is correct
             if (
                 angle_anchor_and_heading_turn_direction
-                == angle_forward_and_heading_turn_direction
-            ) and angle_forward_and_heading <= angle_anchor_and_forward:
-                self.direction_error = 1 - (angle_forward_and_heading / 2) / 60
-                self.speed *= 2
+                == angle_anchor_and_forward_turn_direction
+            ):
+                # heading is same as anchor
+                self.direction_error = 1
+                if angle_anchor_and_heading > angle_anchor_and_forward:
+                    # heading is more than forward.
+                    self.direction_error = angle_forward_and_heading
             else:
-                self.direction_error = 1 - angle_forward_and_heading / 60
+                # heading in opposite direction
+                self.direction_error = angle_anchor_and_heading * 2
         else:
-            self.direction_error = 1 - (angle_forward_and_heading * 2) / 60
-            self.speed /= 2
+            # steering angle is wrong
+            self.direction_error = angle_anchor_and_heading * 4
 
-        self.direction_error = max(0, self.direction_error)
-
-        # self.direction_reward = self.direction_error * MAX_SPEED
+        self.direction_error = max(1, self.direction_error)
 
     def calc_speed_reward(self):
         self.speed_reward = self.speed / MAX_SPEED
         if self.current_angle <= 90:
-            self.direction_reward = self.direction_error * 90 / self.current_angle
+            self.direction_reward = 1 / math.pow(self.direction_error, 1)
+            self.direction_reward = self.direction_reward * 90 / self.current_angle
             self.speed_reward = 0
         else:
             self.direction_reward = 0
-        # if self.direction_error:
-        #     self.speed_reward = (
-        #         math.pow(self.direction_error, 1) * self.speed / MAX_SPEED
-        #     )
-        # else:
-        #     self.speed_reward = 0
+        # self.speed_reward = self.speed / math.pow(self.direction_error, 2)
 
     def calc_lane_reward(self):
         self.lane_reward = 1
