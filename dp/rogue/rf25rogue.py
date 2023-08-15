@@ -322,23 +322,21 @@ class Reward:
         correct_direction_angle_diff = get_direction_diff(
             self.heading, self.revised_direction
         )
-
-        # acceptable difference. error only from 175.
-        self.current_angle = min(180, self.current_angle + 5)
-
-        factor_base = (180 - self.current_angle) / 20
-        factor = 180 / math.pow(2, factor_base)
+        factor_base = (180 - self.current_angle) / 10
+        factor = 360 / math.pow(2, factor_base)
 
         correct_direction_angle_diff = max(0, 1 - correct_direction_angle_diff / factor)
         self.speed_reward = correct_direction_angle_diff * self.speed / MAX_SPEED
 
-        if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
-            if (self.turn_direction == "right" and self.steering_angle <= 0) or (
-                self.turn_direction == "left" and self.steering_angle >= 0
-            ):
-                self.speed_reward = self.speed / MAX_SPEED
-            else:
-                self.speed_reward = 0
+        if (self.turn_direction == "right" and self.steering_angle <= 0) or (
+            self.turn_direction == "left" and self.steering_angle >= 0
+        ):
+            if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
+                self.speed_reward = (
+                    self.speed / MAX_SPEED + self.steering / MAX_STEERING
+                )
+        else:
+            self.speed_reward = 0
 
     def calc_lane_reward(self):
         self.lane_reward = 1
@@ -347,9 +345,9 @@ class Reward:
             if (self.turn_direction == "left" and self.is_left) or (
                 self.turn_direction == "right" and not self.is_left
             ):
-                self.lane_reward = min(2, self.border_reward * 4)
+                self.lane_reward = min(1, self.border_reward * 2)
                 if not self.all_wheels_on_track:
-                    self.lane_reward = 2
+                    self.lane_reward = 1
             else:
                 self.lane_reward = 0
                 self.speed_reward = 0
