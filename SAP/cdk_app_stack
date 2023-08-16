@@ -8182,3 +8182,580 @@ class CDKAppStack(Stack):
 
         self.assign_permissions()
 
+"""
+This is the CDK Stack creation file
+"""
+from pathlib import Path
+import json
+import os
+import re
+import sys
+import subprocess
+import time
+import shutil
+from dotenv import dotenv_values
+from aws_cdk import (
+    Stack,
+    Duration,
+    Size,
+    CfnOutput,
+    RemovalPolicy,
+    Fn,
+    aws_s3 as s3,
+    aws_s3_deployment as s3deploy,
+    aws_s3_notifications as s3_notify,
+    aws_logs as logs,
+    aws_iam as iam,
+    aws_lambda as lambda_,
+    aws_cloudwatch as cloudwatch,
+    aws_cloudwatch_actions,
+    aws_sns as sns,
+    aws_ssm as ssm,
+    aws_cognito as cognito,
+    aws_secretsmanager as secretsmanager,
+    aws_cloudfront_origins as origins,
+    aws_certificatemanager as acm,
+    aws_cloudfront as cloudfront,
+    aws_codebuild as codebuild,
+    aws_codepipeline as pipeline,
+    aws_codepipeline_actions as codepipeline_actions,
+)
+from constructs import Construct
+
+from aws_cdk.custom_resources import (
+    AwsCustomResource,
+    AwsCustomResourcePolicy,
+    AwsSdkCall,
+    PhysicalResourceId,
+)
+
+class CDKAppStack(Stack):
+    """
+    This class will create main stack
+    """
+
+    def from_ssm(self, path):
+        """
+        This function will return ssm value for parameter
+        """
+        # function to get parameters stored in ssm
+        return ssm.StringParameter.from_string_parameter_attributes(
+            self, path, parameter_name=path
+        ).string_value
+    
+    def get_access_policy(self, policy_file):
+        """
+        This function will generate the policy file
+        """
+        self.logging.info(f"Applying policy file {policy_file}")
+        data = {}
+        with open(policy_file, "r") as pol_file:
+            data = pol_file.read()
+        
+        data = json.loads(data)
+        return data
+        
+    def env_vars_quick_load(self):
+        self.logging.info(f"Applying .env(s) to stack")
+        for k, v in self.config.items():
+            try:
+                setattr(self, k.lower(), v)
+            except:
+                pass
+
+    def initialize_constants(self):
+        """
+        This function will initialize constants
+        """
+        # constants
+        self.env_vars_quick_load()
+
+        self.cfnoutput_parameter = self.cfnoutput_parameter.replace("#", self.app_name)
+    
+    @staticmethod
+    def enable_ssl(bucket):
+        bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                effect=iam.Effect.DENY,
+                actions=["s3:*"],
+                resources=[
+                    f"{bucket.bucket_arn}/*",
+                    f"{bucket.bucket_arn}",
+                ],
+                principals=[iam.StarPrincipal()],
+                conditions={"Bool": {"aws:SecureTransport": False}},
+            )
+        )
+        
+    def create_buckets(self):
+        """
+        Create s3 bucket
+        """
+        self.asset_bucket = s3.Bucket(
+            self,
+            f"{self.app_name}-{self.asset_bucket}-test",
+            bucket_name=f"{self.app_name}-{self.asset_bucket}-{self.region_name}-test"[:63].strip("-"),
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
+        )
+        self.enable_ssl(self.asset_bucket)
+        
+        self.code_bucket = s3.Bucket(
+            self,
+            f"{self.app_name}codebucket",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            enforce_ssl=True,
+            versioned=True,
+        )
+        self.enable_ssl(self.code_bucket)
+    
+    @staticmethod
+    def zip_directory(self,source_path,destn_path):
+        try:
+            shutil.make_archive(f"code", "zip", source_path)
+            shutil.move("code.zip", f"{destn_path}/code.zip")
+        except Exception as e:
+            self.logging.info(f"Failed to zip folder due to: {e}")
+            
+    def load_bucket(self):
+        """
+        Load zip file to bucket
+        """
+        source_path = f"{self.code_location}/cip-portal-frontend/cip-portal-frontend"
+        destn_path = f"{self.code_location}/cip-portal-frontend"
+        self.zip_directory(self,source_path,destn_path)
+        self.s3bucketdeployment = s3deploy.BucketDeployment(
+            self,
+            f"{self.app_name}copyfrontendcode",
+            sources=[
+                s3deploy.Source.asset(f"{destn_path}/code.zip")
+            ],
+            destination_bucket=self.code_bucket,
+            extract=False
+        )
+        
+    def create_codepipeline(self):
+        """
+        Create codebuild project and codepipeline for assets deployment to s3
+        """
+        
+        buildspec_location = str(Path(self.code_location).joinpath("cip-portal-frontend/buildspec.yml"))
+
+        self.frontend_codebuild_project = codebuild.PipelineProject(
+            self,
+            f"{self.app_name}cipportalfrontendcodebuild",
+            project_name=f"{self.app_name}-cip-portalfrontend-codebuild",
+            description="CodeBuild Project for Portal Frontend asset.",
+            environment=codebuild.BuildEnvironment(
+                build_image=codebuild.LinuxBuildImage.STANDARD_5_0
+            ),
+            build_spec=codebuild.BuildSpec.from_asset(buildspec_location)
+        )
+       
+        source_artifact = pipeline.Artifact("SourceArtifact")
+        build_artifact = pipeline.Artifact("BuildArtifact")
+
+        # Create source stage for CodePipeline
+        source_stage = pipeline.StageProps(
+            stage_name="Source",
+            actions=[
+                codepipeline_actions.S3SourceAction(
+                    action_name="S3Trigger",
+                    bucket=self.code_bucket,
+                    bucket_key=Fn.select(0, self.s3bucketdeployment.object_keys),
+                    output=source_artifact,
+                    trigger=codepipeline_actions.S3Trigger.POLL)
+            ]
+        )
+
+        # Create build stage for CodePipeline
+        build_stage = pipeline.StageProps(
+            stage_name="Build",
+            actions=[
+                codepipeline_actions.CodeBuildAction(
+                    action_name="Build",
+                    input=source_artifact,
+                    project=self.frontend_codebuild_project,
+                    outputs=[build_artifact]
+                )
+            ]
+        )
+
+        # Create deploy stage for CodePipeline
+        deploy_stage = pipeline.StageProps(
+            stage_name="Deploy",
+            actions=[
+                codepipeline_actions.S3DeployAction(
+                action_name="S3Deploy",
+                bucket=self.asset_bucket,
+                input=build_artifact
+                )]
+        )
+
+        # Create CodePipeline 
+        self.frontend_codepipeline = pipeline.Pipeline(
+            self, 
+            f"{self.app_name}cipportalfrontendpipeline",
+            pipeline_name=f"{self.app_name}-cip-portalfrontend-pipeline",
+            stages=[source_stage, build_stage, deploy_stage]
+        )
+        
+    def import_edge_lambda(self):
+        """
+        Custom resource to import edge lambda arn from SSM parameter in another region
+        """
+        
+        self.get_parameter = AwsCustomResource(
+            self, 
+            f"{self.app_name}importedgelambda",
+            on_update=AwsSdkCall( 
+                service="SSM",
+                action="getParameter",
+                parameters={
+                    "Name": f"{self.cfnoutput_parameter}/{self.edge_lambda_version_parameter_name}"
+                },
+                region="us-east-1",
+                physical_resource_id=PhysicalResourceId.of(str(time.time())),
+            ),
+            policy=AwsCustomResourcePolicy.from_statements(
+                statements=[
+                    iam.PolicyStatement(
+                        effect=iam.Effect.ALLOW,
+                        actions=["ssm:GetParameter"],
+                        resources=[
+                            f"arn:aws:ssm:us-east-1:{self.account_id}:parameter{self.cfnoutput_parameter}/{self.edge_lambda_version_parameter_name}"
+                        ],
+                    )
+                ]
+            ),
+        )
+        
+    def create_cloudfront(self):
+        """
+        Create cloudfront distribution , response policy and cache policy
+        """
+
+        response_headers_policy = cloudfront.ResponseHeadersPolicy(
+            self,
+            f"{self.app_name}frontendresponseheaderspolicy-test",
+            comment=f"Response header Policy for Portal frontend Cloudfront for app {self.app_name}",
+            response_headers_policy_name=f"{self.app_name}FrontendSecurityHeadersPolicy-test",
+            security_headers_behavior=cloudfront.ResponseSecurityHeadersBehavior(
+                content_security_policy=cloudfront.ResponseHeadersContentSecurityPolicy(
+                    content_security_policy="default-src 'self' 'unsafe-eval' 'unsafe-inline' *.accenture.com *.meaplatform.com https://fonts.gstatic.com; worker-src blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' *.cognitiveinsurance.accenture.com *.amazonaws.com *.googleusercontent.com data:; connect-src 'self' *.cognitiveinsurance.accenture.com *.amazoncognito.com *.googleusercontent.com *.meaplatform.com *.amazonaws.com; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+                    override=True,
+                ),
+                content_type_options=cloudfront.ResponseHeadersContentTypeOptions(
+                    override=True
+                ),
+                frame_options=cloudfront.ResponseHeadersFrameOptions(
+                    frame_option=cloudfront.HeadersFrameOption.SAMEORIGIN, override=True
+                ),
+                strict_transport_security=cloudfront.ResponseHeadersStrictTransportSecurity(
+                    access_control_max_age=Duration.seconds(31536000),
+                    include_subdomains=True,
+                    override=True,
+                ),
+                xss_protection=cloudfront.ResponseHeadersXSSProtection(
+                    protection=True,
+                    mode_block=True,
+                    override=True,
+                ),
+            ),
+            custom_headers_behavior=cloudfront.ResponseCustomHeadersBehavior(
+                custom_headers=[cloudfront.ResponseCustomHeader(header="Cache-Control", value="private, max-age=0", override=True)]
+            ),
+        )
+
+        cache_policy = cloudfront.CachePolicy(
+            self,
+            f"{self.app_name}frontendcachepolicy-test",
+            cache_policy_name=f"{self.app_name}frontendcachepolicy-test", 
+            comment=f"Cache Policy for Portal frontend Cloudfront for app {self.app_name}", 
+            default_ttl=Duration.seconds(604800), 
+            enable_accept_encoding_brotli=True, 
+            enable_accept_encoding_gzip=True,
+            max_ttl=Duration.seconds(604800), 
+            min_ttl=Duration.seconds(0), 
+            )
+        
+        cf_logs_bucket = s3.Bucket(
+            self,
+            f"{self.app_name}frontendcflogsbucket-test",
+            bucket_name=f"{self.app_name}-frontendcflogs-{self.region_name}-test"[:63].strip("-"),
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            object_ownership=s3.ObjectOwnership.BUCKET_OWNER_PREFERRED,
+            removal_policy=RemovalPolicy.DESTROY,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+        )
+        cf_logs_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetBucketAcl", "s3:PutBucketAcl"],
+                resources=[cf_logs_bucket.bucket_arn],
+                principals=[iam.ServicePrincipal("cloudfront.amazonaws.com")],
+            )
+        )
+        
+        bucket_origin = origins.S3Origin(self.asset_bucket)
+        
+        frontend_distribution = cloudfront.Distribution(
+            self,
+            f"{self.app_name}cloudfront-test",
+            comment="test cloudfront",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=bucket_origin,
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+                cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                response_headers_policy=response_headers_policy,
+                edge_lambdas=[cloudfront.EdgeLambda(
+                    function_version=lambda_.Version.from_version_arn(
+                        self,
+                        "edgelambda",
+                        self.get_parameter.get_response_field("Parameter.Value")),
+                    event_type=cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST
+                )
+                ]
+            ),
+            additional_behaviors={
+                "assets/*": cloudfront.BehaviorOptions(
+                origin=bucket_origin,
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+                cache_policy=cache_policy,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+            )} ,
+            enable_logging=True,
+            log_bucket=cf_logs_bucket,
+        )
+
+        frontend_distribution.node.add_dependency(cf_logs_bucket)
+
+    def create_cognito_userpool(self):
+        """
+        Create Cognito User Pool and client
+        """
+        
+        self.userpool = cognito.UserPool(
+            self,
+            f"{self.app_name}-userpool",
+            user_pool_name=f"{self.app_name}-userpool",
+            sign_in_case_sensitive=False,
+            account_recovery=cognito.AccountRecovery.NONE,
+            custom_attributes={
+                "role": cognito.StringAttribute(min_len=1, max_len=256, mutable=True)
+                }
+            )
+            
+        cfn_user_pool_domain = cognito.CfnUserPoolDomain(
+            self, 
+            f"{self.app_name}-userpooldomain",
+            domain=f"{self.app_name}-userpooldomain",
+            user_pool_id=self.userpool.user_pool_id,
+        )
+
+        self.userpool_client = self.userpool.add_client(
+            f"{self.app_name}-portal-client",
+            user_pool_client_name=f"{self.app_name}-portal-client",
+            refresh_token_validity=Duration.days(1),
+            auth_flows=cognito.AuthFlow(
+                user_password=True
+            ),
+            o_auth=cognito.OAuthSettings(
+                flows=cognito.OAuthFlows(
+                    authorization_code_grant=True
+                ),
+                scopes=[cognito.OAuthScope.OPENID,cognito.OAuthScope.PROFILE,cognito.OAuthScope.EMAIL],
+                callback_urls=[f"https://{self.frontend_custom_domain_name}/redirect"],
+                logout_urls=[f"https://{self.frontend_custom_domain_name}/user-logged-out"]
+            )
+        )
+
+        ssm.StringParameter(
+            self,
+            f"{self.app_name}cognitouserpoolparameter",
+            parameter_name=f"{self.cfnoutput_parameter}/{self.cognitouserpool_parameter_name}",
+            description=f"{self.cognitouserpool_parameter_description}",
+            string_value=json.dumps(
+                {"user_pool_id":self.userpool.user_pool_id}
+            ),
+        )
+        
+        ssm.StringParameter(
+            self,
+            f"{self.app_name}authorizerissuerparameter",
+            parameter_name=f"{self.cfnoutput_parameter}/{self.authorizerissuer_parameter_name}",
+            description=f"{self.authorizerissuer_parameter_description}",
+            string_value=json.dumps(
+                {self.app_name:{"iss":self.userpool.user_pool_provider_url,"aud":[self.userpool_client.user_pool_client_id]}}
+            ),
+        )
+    
+    def create_identity_pool(self):
+        """
+        Create Cognito Identity Pool
+        """
+        
+        self.cognito_identity_pool = cognito.CfnIdentityPool(
+            self, 
+            f"{self.app_name}-identitypool",
+            identity_pool_name= f"{self.app_name}-identitypool",
+            cognito_identity_providers=[cognito.CfnIdentityPool.CognitoIdentityProviderProperty(
+                client_id=self.userpool_client.user_pool_client_id,
+                provider_name=self.userpool.user_pool_provider_name,
+            )],
+            allow_unauthenticated_identities=False
+            )
+        
+        identitypool_policy = self.get_access_policy(
+            Path(self.policies_path).joinpath("identitypoolrole_policy.json")
+        )
+        
+        all_statements = []
+        for statement in identitypool_policy:
+            all_statements.append(iam.PolicyStatement().from_json(statement))
+        
+        identity_pool_role = iam.Role(
+            self,
+            f"{self.app_name}identitypoolrole",
+            role_name=f"{self.app_name}-identitypoolrole",
+            assumed_by=iam.WebIdentityPrincipal(
+                "cognito-identity.amazonaws.com", {
+                "StringEquals": {"cognito-identity.amazonaws.com:aud": self.cognito_identity_pool.ref},
+                "ForAnyValue:StringLike": {"cognito-identity.amazonaws.com:amr": "authenticated"}
+            }),
+            description="IAM role for cognito identity pool",
+            inline_policies=dict(
+                inline_policy_from_cdk=iam.PolicyDocument(statements=all_statements)
+            ),
+        )
+        
+        cfn_identity_pool_role_attachment = cognito.CfnIdentityPoolRoleAttachment(
+            self, 
+            f"{self.app_name}-identitypoolroleattachment",
+            identity_pool_id=self.cognito_identity_pool.ref,
+            roles={'authenticated': identity_pool_role.role_arn}
+        )
+
+    def assign_permissions(self):
+        """
+        Add permissions to the resources
+        """
+        self.code_bucket.grant_read_write(self.frontend_codepipeline.role)
+        self.code_bucket.grant_read_write(self.frontend_codebuild_project)  
+        
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        """
+        Initialization for CDK
+        """
+        self.invocation_directory = kwargs.pop("INVOCATION_DIRECTORY")
+        self.code_location = kwargs.pop("CODE_LOCATION")
+        self.region_name = kwargs["env"].region
+        self.app_environment = kwargs.pop("app_environment")
+        self.logging = kwargs.pop("logging")
+        self.config = vars(kwargs.pop("config"))
+        self.is_velocity = kwargs.pop("is_velocity")
+        self.account_id = kwargs.pop("account")
+        super().__init__(scope, construct_id, **kwargs)
+
+        self.initialize_constants()
+        
+        self.create_cognito_userpool()
+        
+        self.create_identity_pool()
+        
+        self.create_buckets()
+        
+        self.load_bucket()
+        
+        self.create_codepipeline()
+        
+        self.import_edge_lambda()
+        
+        self.create_cloudfront()
+        
+        self.assign_permissions()
+        
+class CDKAppStackEdgeLambda(Stack):
+    """
+    This stack will create Edge lambda in us-east-1 region
+    """
+    def env_vars_quick_load(self):
+        self.logging.info(f"Applying .env(s) to stack")
+        for k, v in self.config.items():
+            try:
+                setattr(self, k.lower(), v)
+            except:
+                pass
+            
+    def initialize_constants(self):
+        """
+        This function will initialize constants
+        """
+        # constants
+        self.env_vars_quick_load()
+
+        self.cfnoutput_parameter = self.cfnoutput_parameter.replace("#", self.app_name)
+    
+    def create_edge_lambda(self):
+        """
+        Creae edge lambda in N Virginia region
+        """
+        
+        edgelambda_role = iam.Role(
+            self,
+            f"{self.app_name}edgelambdarole-test",
+            assumed_by=iam.CompositePrincipal(
+                iam.ServicePrincipal("edgelambda.amazonaws.com"),
+                iam.ServicePrincipal("lambda.amazonaws.com"),
+            ),
+            description="This role will be assumed by edge lambda.",
+            role_name=f"{self.app_name}edgelambdarole-test",
+        )
+        edgelambda_role.add_managed_policy(
+            iam.ManagedPolicy.from_aws_managed_policy_name(
+                "service-role/AWSLambdaBasicExecutionRole"
+            )
+        )
+        
+        asset_location = str(Path(self.code_location).joinpath(self.edge_lambda_name))
+        #does it need xray?
+        edge_lambda = lambda_.Function(
+            self,
+            f"{self.app_name}{self.edge_lambda_name}-test",
+            function_name=f"{self.app_name}{self.edge_lambda_name}-test",
+            code=lambda_.Code.from_asset(asset_location),
+            description=self.edge_lambda_description,
+            handler="index.handler",
+            role=edgelambda_role,
+            timeout=Duration.seconds(3),
+            memory_size=128,
+            tracing=lambda_.Tracing.ACTIVE,
+            runtime=lambda_.Runtime.NODEJS_14_X,
+        )
+
+        ssm.StringParameter(
+            self,
+            f"{self.app_name}{self.edge_lambda_version_parameter_name}",
+            parameter_name=f"{self.cfnoutput_parameter}/{self.edge_lambda_version_parameter_name}",
+            description=self.edge_lambda_version_parameter_description,
+            string_value=edge_lambda.current_version.function_arn,
+        )
+
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        """
+        Initialization for CDK
+        """
+        self.invocation_directory = kwargs.pop("INVOCATION_DIRECTORY")
+        self.code_location = kwargs.pop("CODE_LOCATION")
+        self.region_name = kwargs["env"].region
+        self.app_environment = kwargs.pop("app_environment")
+        self.config = vars(kwargs.pop("config"))
+        self.logging = kwargs.pop("logging")
+        self.is_velocity = kwargs.pop("is_velocity")
+        self.account_id = kwargs.pop("account")
+
+        super().__init__(scope, construct_id, **kwargs)
+
+        self.initialize_constants()
+        
+        self.create_edge_lambda()
