@@ -1,0 +1,148 @@
+"""
+This is CDK Main File
+"""
+
+import os
+import json
+import yaml
+import sys
+import logging
+from pathlib import Path
+import aws_cdk as cdk
+from aws_cdk import Tags
+from dotenv import dotenv_values
+from types import SimpleNamespace
+from cdk_app.cdk_app_stack import CDKAppStack
+from cdk_app.generic import GenericStack
+
+APP = cdk.App()
+
+velocity_key = "main"
+app_input = json.load(open("parameters/application_inputs.json"))
+app_inputs = app_input[velocity_key]
+is_velocity = True if app_inputs["general"]["IsVelocity"] == "Y" else False
+
+logging.basicConfig(
+    level=logging.ERROR if is_velocity else logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+)
+
+logging.info(f"Loading .env file")
+config = dotenv_values(f".env")
+
+if is_velocity:
+    logging.info("*** Loading VELOCITY configs ***")
+    app_name = app_inputs["general"]["AppName"]
+    app_environment = APP.node.try_get_context(key=velocity_key)
+    account = app_environment["app_account_id"]
+    region_name = app_inputs["general"]["PrimaryOperatingRegion"]
+    valid_cors_origin = app_inputs["general"]["ValidCorsOrigin"]
+    api_custom_domain_name = app_inputs["general"]["ApiCustomDomainName"]
+    api_custom_domain_name_certificate = app_inputs["general"][
+        "ApiCustomDomainNameCertificate"
+    ]
+    api_cloudfront_certificate = app_inputs["general"]["ApiCloudfrontCertificate"]
+    app_environment = app_inputs["general"]["EnvironmentName"]
+    app_name = f"{app_name}{app_environment}"
+    email_addresses = ";".join(app_inputs["general"]["TopicSupportGroupEmailAddresses"])
+else:
+    app_environment = APP.node.try_get_context(key="env")
+    if not app_environment:
+        raise Exception(
+            "No context parameter passed. Excepting => -c env=<app environment>"
+        )
+    try:
+        app_name = app_environment
+        app_environment = APP.node.try_get_context(key=app_environment)
+        account = app_environment["account"]
+        region_name = app_environment["region"]
+        valid_cors_origin = app_environment["valid_cors_origin"]
+        api_custom_domain_name = app_environment["api_custom_domain_name"]
+        api_custom_domain_name_certificate = app_environment[
+            "api_custom_domain_name_certificate"
+        ]
+        api_cloudfront_certificate = app_environment["api_cloudfront_certificate"]
+        app_environment = app_environment["environment"]
+        email_addresses = config["TOPIC_SUPPORT_GROUP_EMAIL_ADDRESSES"]
+    except Exception as error:
+        logging.error(error)
+        raise Exception(f"Environment `{app_name}` not found")
+
+custom_config = {
+    "REGION_NAME": region_name,
+    "APP_NAME": app_name,
+    "TOPIC_SUPPORT_GROUP_EMAIL_ADDRESSES": email_addresses,
+    "VALID_CORS_ORIGIN": valid_cors_origin,
+    "API_CUSTOM_DOMAIN_NAME": api_custom_domain_name,
+    "API_CUSTOM_DOMAIN_NAME_CERTIFICATE": api_custom_domain_name_certificate,
+    "API_CLOUDFRONT_CERTIFICATE": api_cloudfront_certificate,
+}
+config.update(custom_config)
+config.update(app_inputs[region_name])
+app_configs = dotenv_values(f"{app_name}.env")
+config.update(app_configs)
+config = SimpleNamespace(**config)
+
+stack_prefix = f"{config.APP_NAME}-{config.REGION_NAME}-{config.STACK_NAME}"
+
+logging.info(f"Current Working Directory   : {os.getcwd()}")
+INVOCATION_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+logging.info(f"Script Invocation Directory : {INVOCATION_DIRECTORY}")
+CODE_LOCATION = Path(config.CODE_LOCATION).resolve()
+logging.info(f"Code Directory              : {CODE_LOCATION}")
+
+logging.info(f"Creating environment in region {config.REGION_NAME}")
+CDK_ENV = cdk.Environment(account=account, region=config.REGION_NAME)
+
+APPSTACK = CDKAppStack(
+    APP,
+    stack_prefix,
+    stack_name=stack_prefix,
+    env=CDK_ENV,
+    CODE_LOCATION=CODE_LOCATION,
+    INVOCATION_DIRECTORY=INVOCATION_DIRECTORY,
+    app_environment=app_environment,
+    config=config,
+    logging=logging,
+    account=account,
+    is_velocity=is_velocity,
+)
+
+
+Tags.of(APPSTACK).add("Name", config.APP_NAME_TAG)
+Tags.of(APPSTACK).add("Module", config.MODULE_NAME_TAG)
+
+if is_velocity:
+    manifest = yaml.safe_load(open("manifest.yaml"))
+    Tags.of(APPSTACK).add("VelocityBlockName", manifest["blockMetadata"]["name"])
+    Tags.of(APPSTACK).add("VelocityBlockVersion", manifest["blockMetadata"]["version"])
+
+APPSTACKGENERIC = GenericStack(
+    APP,
+    f"genericsettings-{config.REGION_NAME}",
+    stack_name=f"genericsettings-{config.REGION_NAME}",
+    env=CDK_ENV,
+    CODE_LOCATION=CODE_LOCATION,
+    INVOCATION_DIRECTORY=INVOCATION_DIRECTORY,
+    app_environment=app_environment,
+    config=config,
+    logging=logging,
+    account=account,
+    is_velocity=is_velocity,
+)
+
+
+Tags.of(APPSTACKGENERIC).add("Name", config.APP_NAME_TAG)
+Tags.of(APPSTACKGENERIC).add("Module", config.MODULE_NAME_TAG)
+
+if is_velocity:
+    manifest = yaml.safe_load(open("manifest.yaml"))
+    Tags.of(APPSTACKGENERIC).add("VelocityBlockName", manifest["blockMetadata"]["name"])
+    Tags.of(APPSTACKGENERIC).add(
+        "VelocityBlockVersion", manifest["blockMetadata"]["version"]
+    )
+
+# synthesize it
+logging.info("Synthesizing stack")
+APP.synth()
