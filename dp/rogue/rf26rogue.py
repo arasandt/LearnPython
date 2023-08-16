@@ -236,14 +236,14 @@ class Reward:
         #     self.track_data["p" + str(int(DIRECTION_LOOKAHEAD // 2))]["coordinates"],
         #     self.track_data[0]["coordinates"],
         # )
-        # (
-        #     self.upcoming_angle,
-        #     self.upcoming_angle_turn_direction,
-        # ) = self.get_angle_and_turn(
-        #     self.track_data[0]["coordinates"],
-        #     self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
-        #     self.track_data[DIRECTION_LOOKAHEAD * 2]["coordinates"],
-        # )
+        (
+            self.upcoming_angle,
+            self.upcoming_angle_turn_direction,
+        ) = self.get_angle_and_turn(
+            self.track_data[0]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD * 2]["coordinates"],
+        )
 
         # self.revised_direction = self.track_data[0]["angles"][DIRECTION_LOOKAHEAD]
         self.revised_direction = get_angle_between_coordinates(
@@ -326,20 +326,15 @@ class Reward:
         factor = 360 / math.pow(2, factor_base)
 
         correct_direction_angle_diff = max(0, 1 - correct_direction_angle_diff / factor)
-        self.speed_reward = (
-            correct_direction_angle_diff
-            * (self.speed / MAX_SPEED + self.steering / MAX_STEERING)
-            / 2
-        )
+        self.speed_reward = correct_direction_angle_diff * self.speed / MAX_SPEED
 
         if (self.turn_direction == "right" and self.steering_angle <= 0) or (
             self.turn_direction == "left" and self.steering_angle >= 0
         ):
-            pass
-            # if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
-            #     self.speed_reward = (
-            #         self.speed / MAX_SPEED + self.steering / MAX_STEERING
-            #     )
+            if self.upcoming_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
+                self.speed_reward = (
+                    self.speed / MAX_SPEED + self.steering / MAX_STEERING
+                ) / 2
         else:
             self.speed_reward = 0
 
@@ -352,7 +347,7 @@ class Reward:
             ):
                 self.lane_reward = min(1, self.border_reward * 2)
                 if not self.all_wheels_on_track:
-                    self.lane_reward = 1
+                    self.lane_reward = 1.1
             else:
                 self.lane_reward = 0
                 self.speed_reward = 0

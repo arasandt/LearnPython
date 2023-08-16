@@ -334,7 +334,7 @@ class Reward:
             if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
                 self.speed_reward = (
                     self.speed / MAX_SPEED + self.steering / MAX_STEERING
-                )
+                ) / 2
         else:
             self.speed_reward = 0
 
@@ -347,7 +347,7 @@ class Reward:
             ):
                 self.lane_reward = min(1, self.border_reward * 2)
                 if not self.all_wheels_on_track:
-                    self.lane_reward = 1
+                    self.lane_reward = 1.1
             else:
                 self.lane_reward = 0
                 self.speed_reward = 0

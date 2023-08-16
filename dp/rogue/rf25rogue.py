@@ -2,7 +2,7 @@ import math, time
 
 # waypoints. do not change as this will affect u-turn angle check.
 # when to consider uturn for immediate angle
-DIRECTION_LOOKAHEAD = 6  # always + 2
+DIRECTION_LOOKAHEAD = 7  # always + 2
 
 MAX_STEERING = 30
 MAX_SPEED = 4.0
@@ -236,14 +236,14 @@ class Reward:
         #     self.track_data["p" + str(int(DIRECTION_LOOKAHEAD // 2))]["coordinates"],
         #     self.track_data[0]["coordinates"],
         # )
-        # (
-        #     self.upcoming_angle,
-        #     self.upcoming_angle_turn_direction,
-        # ) = self.get_angle_and_turn(
-        #     self.track_data[0]["coordinates"],
-        #     self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
-        #     self.track_data[DIRECTION_LOOKAHEAD * 2]["coordinates"],
-        # )
+        (
+            self.upcoming_angle,
+            self.upcoming_angle_turn_direction,
+        ) = self.get_angle_and_turn(
+            self.track_data[0]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD]["coordinates"],
+            self.track_data[DIRECTION_LOOKAHEAD * 2]["coordinates"],
+        )
 
         # self.revised_direction = self.track_data[0]["angles"][DIRECTION_LOOKAHEAD]
         self.revised_direction = get_angle_between_coordinates(
@@ -322,7 +322,10 @@ class Reward:
         correct_direction_angle_diff = get_direction_diff(
             self.heading, self.revised_direction
         )
-        factor_base = (180 - self.current_angle) / 10
+
+        self.weighted_angle = (self.current_angle + self.upcoming_angle) / 2
+
+        factor_base = (180 - self.weighted_angle) / 10
         factor = 360 / math.pow(2, factor_base)
 
         correct_direction_angle_diff = max(0, 1 - correct_direction_angle_diff / factor)
@@ -331,23 +334,23 @@ class Reward:
         if (self.turn_direction == "right" and self.steering_angle <= 0) or (
             self.turn_direction == "left" and self.steering_angle >= 0
         ):
-            if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
+            if self.weighted_angle <= CORRECT_LANE_THRESHOLD_DEGREE:
                 self.speed_reward = (
                     self.speed / MAX_SPEED + self.steering / MAX_STEERING
-                )
+                ) / 2
         else:
             self.speed_reward = 0
 
     def calc_lane_reward(self):
-        self.lane_reward = 1
+        self.lane_reward = 0
 
-        if self.current_angle <= CORRECT_LANE_THRESHOLD_DEGREE and self.speed_reward:
+        if self.weighted_angle <= CORRECT_LANE_THRESHOLD_DEGREE and self.speed_reward:
             if (self.turn_direction == "left" and self.is_left) or (
                 self.turn_direction == "right" and not self.is_left
             ):
                 self.lane_reward = min(1, self.border_reward * 2)
                 if not self.all_wheels_on_track:
-                    self.lane_reward = 1
+                    self.lane_reward = 1.5
             else:
                 self.lane_reward = 0
                 self.speed_reward = 0
