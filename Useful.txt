@@ -212,5 +212,221 @@ aws iam detach-role-policy --role-name viper-cip-uw-admin-role --policy-arn arn:
 aws iam attach-role-policy --role-name viper-cip-uw-admin-role --policy-arn arn:aws:iam:::policy/DenyCodeCommitDeletes
 aws iam list-attached-role-policies --role-name viper-cip-uw-admin-role
 
+#proxy aws cli
+setx HTTP_PROXY http://XX.XX.com:9480
+setx HTTPS_PROXY http://XX.XX..com:9480
+setx AWS_CA_BUNDLE "C:\Users\T22S1ED\Downloads\AWS Zscaler Root CA.pem"
+aws s3 ls --ca-bundle "C:\Users\T22S1ED\Downloads\AWS Zscaler Root CA.pem"
+aws sso login --sso-session Arasan
+aws sts assume-role --role-arn XX --role-session-name "default" --profile xxprofile 
+https://docs.aws.amazon.com/cli/latest/userguide/sso-using-profile.html
+https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html
+
+
+# SSM session using AWS CLI
+aws --region us-east-1 ssm start-session --target i-09e7a7d343fed94d6
+source ~/.bashrc;echo $(curl -s http://169.254.169.254/latest/meta-data/local-ipv4) $(curl -s http://169.254.169.254/latest/meta-data/instance-id); cd ~;pwd;ls -l
+echo $(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+echo $(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+http://169.254.169.254/latest/meta-data/iam/security-credentials/
+
+# Vi copy correctly
+:set paste
+
+# mobaxterm
+history
+!30:p
+
+# EKS and Kubectl cluster commands
+cd /tmp
+sudo yum remove awscli
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+aws --version
+curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.26.8/2023-09-14/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$HOME/bin:$PATH
+open ~/.bashrc and add export PATH=$HOME/bin:$PATH
+aws eks update-kubeconfig --name eksclustername --region us-east-1 
+==> install HELM
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > get_helm.sh
+chmod 700 get_helm.sh
+./get_helm.sh
+
+# Get into EKS POD
+kubectl exec -it clientshare-deployment-989998bfc-5w6qp -n tc -- bash
+
+# Git commands
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+git config --global --get http.proxy
+git config --global --unset http.sslVerify
+git config --global credential.helper cache
+git config --global credential.helper store
+ssh-keygen -t ed25519 -C "thiru_arasandayalan@newyorklife.com"
+ssh-add ~/.ssh/id_ed25519
+clip < ~/.ssh/id_ed25519.pub
+git_branch() {
+  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
+}
+export PS1='\n[\t] \[\e[93m\]\u\[\e[0m\]@\[\e[92m\]\h\[\e[0m\] \[\e[94m\]\w\[\e[91;1m\] $(git_branch)\n\[\e[0m\]\$ '
+alias k="kubectl"
+
+# docker commands
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 905523019479.dkr.ecr.us-east-1.amazonaws.com
+docker run -it account#.dkr.ecr.us-east-1.amazonaws.com/dev-default-eks-alpine-cmf-base-image:1.0 /bin/sh
+
+# EC2 java and maven install
+sudo amazon-linux-extras enable corretto8
+sudo yum install java-1.8.0-amazon-corretto-devel
+sudo wget http://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo
+sudo sed -i s/\$releasever/6/g /etc/yum.repos.d/epel-apache-maven.repo
+sudo yum install -y apache-maven
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-amazon-corretto.x86_64
+
+# Java Application creation through  docker
+FROM 905523019479.dkr.ecr.us-east-1.amazonaws.com/ekscorporatevs-dev-default-eks-alpine-cmf-base-image:1.0
+USER root 
+RUN wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.80/bin/apache-tomcat-9.0.80.tar.gz -P /tmp
+RUN mkdir /opt/tomcat
+RUN tar -xvzf /tmp/apache-tomcat-9.0.80.tar.gz -C /opt/tomcat --strip-components=1
+RUN rm -f /tmp/apache-tomcat-9.0.80.tar.gz
+RUN chmod -R 755 /opt/tomcat	
+RUN apk add openjdk8 --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community
+COPY target/suggestion.war /opt/tomcat/webapps
+RUN echo 'JAVA_OPTS="$JAVA_OPTS -Dspring.profiles.active=int"' > /opt/tomcat/bin/setenv.sh
+RUN chmod -R 755 /opt/tomcat/bin/setenv.sh
+EXPOSE 8080
+ENTRYPOINT ["/opt/tomcat/bin/catalina.sh", "run"]
+
+# run the java container
+docker build -t app .
+docker run -it -p 80:8080 app
+docker exec -it e9b /bin/sh
+cat /opt/tomcat/logs/app.log
+curl http://localhost/app/appurl
+
+# Bin SH commands
+get permission on the file --> stat -c '%a' shutdown.bat
+
+# install jfrog cli
+cd /tmp
+echo "[jfrog-cli]" > jfrog-cli.repo &&
+echo "name=jfrog-cli" >> jfrog-cli.repo &&
+echo "baseurl=https://releases.jfrog.io/artifactory/jfrog-rpms" >> jfrog-cli.repo &&
+echo "enabled=1" >> jfrog-cli.repo &&
+sudo rpm --import https://releases.jfrog.io/artifactory/jfrog-gpg-public/jfrog_public_gpg.key &&
+sudo mv jfrog-cli.repo /etc/yum.repos.d/ &&
+sudo yum install -y jfrog-cli-v2-jf &&
+jf intro
+jf c add
+jf rt u app.war path/to/artifactory
+jf rt s --spec=aql.json
+
+# Server Set-up
+sudo yum remove python3 -y
+sudo amazon-linux-extras enable python3.8
+sudo yum clean metadata
+sudo yum install python3.8 -y
+sudo rm -f /usr/bin/python3; sudo ln -s /usr/bin/python3.8 /usr/bin/python3
+sudo rm -f /usr/bin/pip3; sudo ln -s /usr/bin/pip3.8 /usr/bin/pip3
+python3 --version
+==> set up EKS after this
+
+# install backstage
+git clone --branch v1.18.4 https://github.com/backstage/backstage.git nyl-backstage
+cd /tmp
+curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
+source ~/.bashrc
+nvm ls-remote
+nvm install 18.18.0 
+nvm use 18.18.0
+npm install --global yarn
+sudo yum -y groupinstall "Development Tools"
+cd ~
+npx @backstage/create-app@latest
+cd backstage && yarn install or yarn install --frozen-lockfile
+yarn tsc
+yarn build:backend --config ../../app-config.yaml
+sudo chmod 666 /var/run/docker.sock
+sudo usermod -a -G docker ec2-user
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo systemctl status docker
+updated docker file to use nodejs 18
+docker image build . -f packages/backend/Dockerfile --tag backstage or yarn build-imag
+docker run -it -p 7007:7007 backstage
+aws ecr create-repository --repository-name backstage --profile eng-ekscorporatevs-dev
+docker tag backstage account#.dkr.ecr.us-east-1.amazonaws.com/backstage
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin account#.dkr.ecr.us-east-1.amazonaws.com
+docker push account#.dkr.ecr.us-east-1.amazonaws.com/backstage
+helm upgrade --install backstage chart/backstage/ --dry-run --debug
+--Run locally ---
+yarn dev
+yum install -y nginx
+sudo vi /etc/nginx/nginx.conf
+add the below
+
+        location / {
+        proxy_pass http://localhost:3000/;
+        }
+
+sudo systemctl restart nginx
+sudo dnf -y install postgresql15 postgresql15-server
+sudo postgresql-setup initdb
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+sudo systemctl status postgresql
+
+# Add remove port in Security group
+aws ec2 authorize-security-group-ingress --group-id sg-0a8795711cb03e0cf --cidr 10.0.0.0/0 --protocol tcp --port 7007
+aws ec2 revoke-security-group-ingress --group-id sg-0a8795711cb03e0cf --cidr 10.0.0.0/0 --protocol tcp --port 7007
+
+# Start / Stop Ec2 Instance
+aws ec2 start-instances --instance-ids i-047af98a7ee3eba3d i-075708304839fc563 i-001feeb289b97dc2b --profile eng-profile-dev
+aws ec2 stop-instances --instance-ids i-047af98a7ee3eba3d i-075708304839fc563 i-001feeb289b97dc2b --profile eng-profile-dev
+aws ec2 start-instances --instance-ids i-0bff8c8e112a301de i-04b8c5d41fb171a7d --profile eng-profile-dev 
+aws ec2 stop-instances --instance-ids i-0bff8c8e112a301de i-04b8c5d41fb171a7d --profile eng-profile-dev 
+
+aws ec2 describe-instances --query 'Reservations[].Instances[].[ [Tags[?Key==`Name`].Value][0][0],PrivateIpAddress,State.Name]' --output table
+
+# Submit Cloudformation stack and delete it
+aws cloudformation deploy --stack-name DevelopmentBase --template-file "./cdk.out/DevelopmentBase.template.json" --no-execute-changeset --profile eng-profile-dev 
+aws cloudformation delete-stack --stack-name DevelopmentBase --profile eng-profile-dev
+
+# Connect to EC2 instance using SSH
+cd .ssh
+ssh-keygen -t rsa -b 4096 -f id_rsa_backstage
+ssh-copy-id -f -i id_rsa_backstage.pub ec2-user@10.195.126.108
+ssh ec2-user@10.195.126.108
+
+# install git in Amazon Linux 2023
+sudo dnf install git -y
+
+# install docker in Amazon Linux 2023
+sudo dnf update
+sudo dnf install -y docker
+docker --version
+
+# install nginx in Amazon Linux 2023
+sudo dnf install -y nginx
+
+# kubectl k8s set namespace 
+kubectl config set-context --current --namespace=backstage
+
+# clean up pods
+#
+# Clean up dying pods
+#
+pods=$( kubectl get pods | tail -n +1 | awk -F " " '{print $1}' )
+for pod in $pods;
+do
+    kubectl delete pod $pod --force
+done
+
+# tfdocs creation
+docker run --rm --volume "$(pwd):/terraform-docs" -u $(id -u) quay.io/terraform-docs/terraform-docs:0.16.0 markdown /terraform-docs > docs/index.md
 
 
