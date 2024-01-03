@@ -217,6 +217,7 @@ setx HTTP_PROXY http://XX.XX.com:9480
 setx HTTPS_PROXY http://XX.XX..com:9480
 setx AWS_CA_BUNDLE "C:\Users\T22S1ED\Downloads\AWS Zscaler Root CA.pem"
 aws s3 ls --ca-bundle "C:\Users\T22S1ED\Downloads\AWS Zscaler Root CA.pem"
+aws configure sso
 aws sso login --sso-session Arasan
 aws sts assume-role --role-arn XX --role-session-name "default" --profile xxprofile 
 https://docs.aws.amazon.com/cli/latest/userguide/sso-using-profile.html
